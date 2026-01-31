@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
+const { verifyToken, verifyAdmin } = require('../middleware/authMiddleware');
 
-// Khách đặt hàng
-router.post('/', orderController.createOrder);
+router.post('/', verifyToken, orderController.createOrder);
 
-// Admin xem danh sách đơn
-router.get('/', orderController.getOrders);
+router.get('/my-orders', verifyToken, orderController.getMyOrders);
 
-router.put('/:id/status', orderController.updateOrderStatus);
+router.get('/', verifyToken, verifyAdmin, orderController.getOrders);
+
+router.put('/:id/status', verifyToken, verifyAdmin, orderController.updateOrderStatus);
 
 module.exports = router;
