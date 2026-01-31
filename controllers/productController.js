@@ -23,13 +23,36 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// Get all
+// Get product
 exports.getProducts = async (req, res) => {
   try {
-    const products = await Product.find();
-    res.status(200).json(products);
+    const { keyword, category, minPrice, maxPrice } = req.query;
+
+    let query = {};
+
+    if (keyword) {
+      query.name = { $regex: keyword, $options: 'i' };
+    }
+
+    if (category) {
+      query.category = category;
+    }
+
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) query.price.$gte = Number(minPrice); 
+      if (maxPrice) query.price.$lte = Number(maxPrice); 
+    }
+
+    const products = await Product.find(query);
+    
+    res.status(200).json({
+      count: products.length, 
+      products: products
+    });
+
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    res.status(500).json({ message: "❌ Lỗi server", error: error.message });
   }
 };
 
