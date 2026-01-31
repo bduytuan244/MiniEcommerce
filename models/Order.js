@@ -32,8 +32,16 @@ const orderSchema = new mongoose.Schema({
   // Trạng thái đơn hàng
   status: { 
     type: String, 
-    default: 'Pending', 
-    enum: ['Pending', 'Shipping', 'Delivered', 'Cancelled'] 
+    default: 'Chờ xác nhận',
+    enum: [
+      'Chờ xác nhận', 
+      'Đã xác nhận', 
+      'Đang đóng gói', 
+      'Đang vận chuyển', 
+      'Hoàn thành', 
+      'Đã hủy', 
+      'Trả hàng'
+    ] 
   }
 }, {
   timestamps: true 

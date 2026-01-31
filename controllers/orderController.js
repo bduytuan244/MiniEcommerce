@@ -59,13 +59,28 @@ exports.getOrders = async (req, res) => {
 exports.updateOrderStatus = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
-    if (order) {
-      order.status = req.body.status || order.status;
-      const updatedOrder = await order.save();
-      res.json({ message: "Cập nhật trạng thái thành công!", order: updatedOrder });
-    } else {
-      res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+
+    const newStatus = req.body.status;
+
+    if (newStatus === 'Đã hủy' || newStatus === 'Trả hàng') {
+
+      if (order.status !== 'Đã hủy' && order.status !== 'Trả hàng') {
+        for (const item of order.orderItems) {
+          const product = await Product.findById(item.product);
+          if (product) {
+            product.stock += item.qty; 
+            await product.save();
+          }
+        }
+      }
     }
+
+    order.status = newStatus;
+    const updatedOrder = await order.save();
+    
+    res.json({ message: `Đã cập nhật trạng thái: ${newStatus}`, order: updatedOrder });
+
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }

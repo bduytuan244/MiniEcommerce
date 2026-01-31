@@ -1,15 +1,16 @@
 const Product = require('../models/Products');
 
-// Import
+// Create
 exports.createProduct = async (req, res) => {
   try {
-    const { name, price, stock, category, description, images } = req.body;
+    const { name, price, stock, category, description, images, brand } = req.body;
 
     const newProduct = new Product({
       name, 
       price, 
       stock, 
       category,
+      brand,
       description,
       images
     });
@@ -23,10 +24,10 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// Get product
+// 2. Get
 exports.getProducts = async (req, res) => {
   try {
-    const { keyword, category, minPrice, maxPrice } = req.query;
+    const { keyword, category, minPrice, maxPrice, brand } = req.query;
 
     let query = {};
 
@@ -36,6 +37,10 @@ exports.getProducts = async (req, res) => {
 
     if (category) {
       query.category = category;
+    }
+
+    if (brand) {
+      query.brand = brand;
     }
 
     if (minPrice || maxPrice) {
@@ -52,7 +57,7 @@ exports.getProducts = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ message: "❌ Lỗi server", error: error.message });
+    res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
 
