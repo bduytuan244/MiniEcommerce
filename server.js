@@ -17,6 +17,9 @@ const orderRoutes = require('./routes/orderRoutes');
 // Auth Routes
 const authRoutes = require('./routes/authRoutes');
 
+// User Routes
+const userRoutes = require('./routes/userRoutes');
+
 const app = express();
 
 app.use(express.json());
@@ -24,6 +27,7 @@ app.use(express.json());
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // Kết nối Database
 mongoose.connect(process.env.MONGO_URI)
