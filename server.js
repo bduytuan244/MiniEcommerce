@@ -2,20 +2,24 @@ const express = require('express');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-// Import Models
+
 const User = require('./models/User');
 
 const Product = require('./models/Products'); 
 const Order = require('./models/Order');
 
-// Import Routes
+// CRUD Routes
 const productRoutes = require('./routes/productRoutes');
+
+// Order Routes
+const orderRoutes = require('./routes/orderRoutes');
 
 const app = express();
 
 app.use(express.json());
 
 app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Kết nối Database
 mongoose.connect(process.env.MONGO_URI)
