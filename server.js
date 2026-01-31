@@ -14,12 +14,16 @@ const productRoutes = require('./routes/productRoutes');
 // Order Routes
 const orderRoutes = require('./routes/orderRoutes');
 
+// Auth Routes
+const authRoutes = require('./routes/authRoutes');
+
 const app = express();
 
 app.use(express.json());
 
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/auth', authRoutes);
 
 // Kết nối Database
 mongoose.connect(process.env.MONGO_URI)
