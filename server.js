@@ -20,6 +20,9 @@ const authRoutes = require('./routes/authRoutes');
 // User Routes
 const userRoutes = require('./routes/userRoutes');
 
+// Cagetory
+const categoryRoutes = require('./routes/categoryRoutes');
+
 const app = express();
 
 app.use(express.json());
@@ -28,6 +31,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/categories', categoryRoutes);
 
 // Kết nối Database
 mongoose.connect(process.env.MONGO_URI)
