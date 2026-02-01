@@ -26,6 +26,12 @@ const categoryRoutes = require('./routes/categoryRoutes');
 // Dashboard
 const dashboardRoutes = require('./routes/dashboardRoutes');
 
+// Review
+const reviewRoutes = require('./routes/reviewRoutes');
+
+// Coupon
+const couponRoutes = require('./routes/couponRoutes');
+
 const app = express();
 
 app.use(express.json());
@@ -36,6 +42,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/coupons', couponRoutes);
 
 // Kết nối Database
 mongoose.connect(process.env.MONGO_URI)
