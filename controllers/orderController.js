@@ -3,43 +3,67 @@ const Product = require('../models/Products');
 
 exports.createOrder = async (req, res) => {
   try {
-    const { customerName, phone, address, orderItems, totalPrice } = req.body;
+    const {
+      orderItems,
+      shippingAddress,
+      paymentMethod,
+      itemsPrice,
+      taxPrice,
+      shippingPrice,
+      totalPrice,
+    } = req.body;
 
     if (orderItems && orderItems.length === 0) {
-      return res.status(400).json({ message: "Giỏ hàng đang trống!" });
+      return res.status(400).json({ message: "Giỏ hàng rỗng" });
     }
 
-    for (const item of orderItems) {
-      const product = await Product.findById(item.product);
-      
-      if (!product) {
-        return res.status(404).json({ message: `Sản phẩm ${item.name} không tồn tại` });
-      }
-      if (product.stock < item.qty) {
-        return res.status(400).json({ message: `Sản phẩm ${item.name} đã hết hàng (Chỉ còn ${product.stock})` });
-      }
-
-      product.stock = product.stock - item.qty;
-      await product.save();
-    }
-
-    // Create order
     const order = new Order({
-      user: req.user.id, 
-      customerName,
-      phone,
-      address,
       orderItems,
-      totalPrice
+      user: req.user._id, 
+      shippingAddress,
+      paymentMethod,
+      itemsPrice,
+      taxPrice,
+      shippingPrice,
+      totalPrice,
     });
 
     const createdOrder = await order.save();
-    res.status(201).json({ message: "Đặt hàng thành công!", order: createdOrder });
+
+    const message = `
+      Xin chào ${req.user.name},
+
+      Cảm ơn bạn đã đặt hàng tại Mini Ecommerce!
+      Đơn hàng của bạn đã được tiếp nhận thành công.
+
+      Mã đơn hàng: ${createdOrder._id}
+      Tổng tiền: ${createdOrder.totalPrice.toLocaleString('vi-VN')} đ
+      Địa chỉ giao: ${createdOrder.shippingAddress.address}, ${createdOrder.shippingAddress.city}
+      
+      Chúng tôi sẽ sớm đóng gói và gửi hàng cho bạn.
+      
+      Trân trọng,
+      Đội ngũ Mini Ecommerce
+    `;
+
+    try {
+      await sendEmail({
+        email: req.user.email, 
+        subject: `Xác nhận đơn hàng #${createdOrder._id}`,
+        message: message
+      });
+      console.log("Đã gửi email xác nhận đơn hàng!");
+    } catch (error) {
+      console.error("Lỗi gửi email:", error.message);
+    }
+
+    res.status(201).json(createdOrder);
 
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
+
 exports.getMyOrders = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user.id }).sort({ createdAt: -1 });
