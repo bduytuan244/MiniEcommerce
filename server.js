@@ -1,53 +1,66 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const path = require('path');
+const { errorHandler } = require('./middleware/errorMiddleware');
 require('dotenv').config();
 
+// Import Models (để mongoose register schema)
+require('./models/User');
+require('./models/Products');
+require('./models/Order');
 
-const User = require('./models/User');
-
-const Product = require('./models/Products'); 
-const Order = require('./models/Order');
-
-// CRUD Routes
+// Import Routes
 const productRoutes = require('./routes/productRoutes');
-
-// Order Routes
 const orderRoutes = require('./routes/orderRoutes');
-
-// Auth Routes
 const authRoutes = require('./routes/authRoutes');
-
-// User Routes
 const userRoutes = require('./routes/userRoutes');
-
-// Cagetory
 const categoryRoutes = require('./routes/categoryRoutes');
-
-// Dashboard
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
+const couponRoutes = require('./routes/couponRoutes');
 
 const app = express();
 
+/* =========================
+   MIDDLEWARE
+========================= */
 app.use(express.json());
 
+/* Serve Frontend (Views) */
+app.use(express.static(path.join(__dirname, 'views')));
+
+/* =========================
+   ROUTES
+========================= */
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/coupons', couponRoutes);
 
-// Kết nối Database
+/* =========================
+   ERROR HANDLER
+========================= */
+app.use(errorHandler);
+
+/* =========================
+   DATABASE
+========================= */
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
-    console.log("Đã kết nối thành công với MongoDB!");
+    console.log('✅ Kết nối MongoDB thành công');
   })
   .catch((err) => {
-    console.error("Lỗi kết nối:", err.message);
+    console.error('❌ Lỗi kết nối MongoDB:', err.message);
   });
 
-// Chạy server
+/* =========================
+   SERVER
+========================= */
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server đang chạy tại http://localhost:${PORT}`);
+  console.log(`🚀 Server chạy tại http://localhost:${PORT}`);
 });

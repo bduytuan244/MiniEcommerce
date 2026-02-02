@@ -3,19 +3,31 @@ const Product = require('../models/Products');
 // Create
 exports.createProduct = async (req, res) => {
   try {
-    const { name, price, stock, category, description, images, brand } = req.body;
+    const { name, price, stock, category, brand, description } = req.body;
+    
+    let imageUrls = [];
+    
+    if (req.files && req.files.length > 0) {
+      imageUrls = req.files.map(file => file.path); 
+    } 
+    else if (req.body.images) {
+        imageUrls = req.body.images;
+    }
+
+    if (imageUrls.length === 0) {
+        return res.status(400).json({ message: "Vui lòng tải lên ít nhất 1 ảnh sản phẩm" });
+    }
 
     const newProduct = new Product({
       name, 
       price, 
       stock, 
       category,
-      brand,
+      brand, 
       description,
-      images
+      images: imageUrls 
     });
 
-    // Lưu vào MongoDB
     await newProduct.save();
 
     res.status(201).json({ message: "Thêm sản phẩm thành công!", product: newProduct });
