@@ -44,7 +44,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/coupons', couponRoutes);
-
+app.use(errorHandler);
 // Kết nối Database
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
@@ -54,6 +54,7 @@ mongoose.connect(process.env.MONGO_URI)
     console.error("Lỗi kết nối:", err.message);
   });
 
+  
 // Chạy server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
