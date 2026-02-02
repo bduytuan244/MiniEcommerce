@@ -7,6 +7,8 @@ const userSchema = new mongoose.Schema({
   phone: { type: String },
   address: { type: String },
   isAdmin: { type: Boolean, default: false }, 
+  resetPasswordToken: String,
+  resetPasswordExpire: Date,
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

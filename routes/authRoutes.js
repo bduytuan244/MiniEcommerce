@@ -22,4 +22,7 @@ router.post('/login', [
   authController.login
 );
 
+router.post('/forgot-password', authController.forgotPassword);
+router.put('/reset-password/:resetToken', authController.resetPassword);
+
 module.exports = router;
