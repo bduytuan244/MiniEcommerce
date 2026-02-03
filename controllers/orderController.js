@@ -109,3 +109,32 @@ exports.updateOrderStatus = async (req, res) => {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
+
+exports.updateOrderToPaid = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+
+    if (order) {
+      order.isPaid = true;
+      order.paidAt = Date.now();
+      
+      order.paymentResult = {
+        id: req.body.id || 'MOCK_PAYMENT_ID_' + Date.now(), 
+        status: req.body.status || 'COMPLETED',
+        update_time: String(new Date()),
+        email_address: req.body.email_address || req.user.email,
+      };
+
+      const updatedOrder = await order.save();
+
+      res.json({
+        message: "Thanh toán giả lập thành công!",
+        order: updatedOrder
+      });
+    } else {
+      res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
