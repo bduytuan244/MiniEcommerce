@@ -3,6 +3,19 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// Create token
+const generateTokens = (id) => {
+  const accessToken = jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE,
+  });
+
+  const refreshToken = jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, {
+    expiresIn: process.env.JWT_REFRESH_EXPIRE,
+  });
+
+  return { accessToken, refreshToken };
+};
+
 // Register
 exports.register = async (req, res) => {
   try {
@@ -29,29 +42,28 @@ exports.register = async (req, res) => {
 };
 
 // Login
-exports.login = async (req, res) => {
+exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: "Sai email hoặc mật khẩu!" });
+    if (!email || !password) {
+      return res.status(400).json({ message: "Vui lòng nhập email và mật khẩu" });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Sai email hoặc mật khẩu!" });
+    const user = await User.findOne({ email }).select('+password');
+    if (!user || !(await user.matchPassword(password))) {
+      return res.status(401).json({ message: "Thông tin đăng nhập không đúng" });
     }
 
-    const token = jwt.sign(
-      { id: user._id, isAdmin: user.isAdmin }, 
-      process.env.JWT_SECRET,                  
-      { expiresIn: '30d' }                     
-    );
+    const tokens = generateTokens(user._id);
 
-    res.json({
-      message: "Đăng nhập thành công!",
-      token,
+    user.refreshToken = tokens.refreshToken;
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      success: true,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       user: {
         id: user._id,
         name: user.name,
@@ -59,9 +71,39 @@ exports.login = async (req, res) => {
         isAdmin: user.isAdmin
       }
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Refresh token
+exports.refreshToken = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(401).json({ message: "Bạn chưa đăng nhập (Thiếu Refresh Token)" });
+    }
+
+    const user = await User.findOne({ refreshToken });
+    if (!user) {
+      return res.status(403).json({ message: "Token không hợp lệ hoặc đã đăng xuất" });
+    }
+
+    jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, decoded) => {
+      if (err) {
+        return res.status(403).json({ message: "Token đã hết hạn, vui lòng đăng nhập lại" });
+      }
+
+      const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+        expiresIn: process.env.JWT_EXPIRE,
+      });
+
+      res.json({ accessToken }); 
+    });
 
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    next(error);
   }
 };
 
@@ -126,6 +168,22 @@ exports.resetPassword = async (req, res, next) => {
 
     res.status(200).json({ message: "Đổi mật khẩu thành công! Bạn có thể đăng nhập lại." });
 
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Logout
+exports.logout = async (req, res, next) => {
+  try {
+
+    const user = await User.findById(req.user.id);
+    if (user) {
+        user.refreshToken = null;
+        await user.save({ validateBeforeSave: false });
+    }
+    
+    res.status(200).json({ message: "Đăng xuất thành công" });
   } catch (error) {
     next(error);
   }
