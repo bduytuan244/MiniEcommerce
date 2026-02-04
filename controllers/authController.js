@@ -17,27 +17,47 @@ const generateTokens = (id) => {
 };
 
 // Register
-exports.register = async (req, res) => {
+exports.register = async (req, res, next) => {
   try {
-    const { name, email, password, phone, address } = req.body;
+    const { name, email, password } = req.body;
 
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(400).json({ message: "Email này đã được sử dụng!" });
+      return res.status(400).json({ message: "Email này đã được sử dụng" });
     }
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
 
-    const newUser = new User({
-      name, email, phone, address,
-      password: hashedPassword 
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpire = Date.now() + 10 * 60 * 1000; 
+
+    const user = await User.create({
+      name,
+      email,
+      password,
+      otp,
+      otpExpire,
+      isVerified: false 
     });
 
-    await newUser.save();
-    res.status(201).json({ message: "Đăng ký thành công!" });
+    const message = `Mã xác thực của bạn là: ${otp}\nMã này có hiệu lực trong 10 phút.`;
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: 'Mã OTP Xác thực tài khoản',
+        message
+      });
+      
+      res.status(200).json({ 
+        message: "Đăng ký thành công! Vui lòng kiểm tra email để lấy mã OTP kích hoạt tài khoản.",
+        email: user.email 
+      });
+
+    } catch (error) {
+      await User.findByIdAndDelete(user._id);
+      return res.status(500).json({ message: "Không thể gửi email OTP. Vui lòng thử lại." });
+    }
 
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    next(error);
   }
 };
 
@@ -53,6 +73,10 @@ exports.login = async (req, res, next) => {
     const user = await User.findOne({ email }).select('+password');
     if (!user || !(await user.matchPassword(password))) {
       return res.status(401).json({ message: "Thông tin đăng nhập không đúng" });
+    }
+
+    if (!user.isVerified) {
+       return res.status(401).json({ message: "Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email lấy OTP." });
     }
 
     const tokens = generateTokens(user._id);
@@ -184,6 +208,47 @@ exports.logout = async (req, res, next) => {
     }
     
     res.status(200).json({ message: "Đăng xuất thành công" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Verify OTP
+exports.verifyAccount = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await User.findOne({
+      email,
+      otp,
+      otpExpire: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Mã OTP không đúng hoặc đã hết hạn" });
+    }
+
+    user.isVerified = true;
+    user.otp = undefined;    
+    user.otpExpire = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    const tokens = generateTokens(user._id);
+    user.refreshToken = tokens.refreshToken;
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      message: "Kích hoạt tài khoản thành công!",
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin
+      }
+    });
+
   } catch (error) {
     next(error);
   }
