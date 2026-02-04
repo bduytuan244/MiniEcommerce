@@ -10,6 +10,23 @@ const orderSchema = new mongoose.Schema({
   phone: { type: String, required: true },
   address: { type: String, required: true },
 
+  isPaid: {
+    type: Boolean,
+    required: true,
+    default: false,
+  },
+  
+  paidAt: {
+    type: Date,
+  },
+
+  paymentResult: {
+    id: { type: String },
+    status: { type: String },
+    update_time: { type: String },
+    email_address: { type: String },
+  },
+
   // Danh sách sản phẩm mua
   orderItems: [
     {
