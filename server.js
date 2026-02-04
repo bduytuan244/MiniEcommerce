@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const mongoose = require('mongoose');
 const path = require('path');
 const { errorHandler } = require('./middleware/errorMiddleware');
@@ -24,6 +25,7 @@ const app = express();
 /* =========================
    MIDDLEWARE
 ========================= */
+app.use(cors());
 app.use(express.json());
 
 /* Serve Frontend (Views) */
