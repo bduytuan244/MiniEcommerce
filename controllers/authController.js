@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
+const sendEmail = require('../utils/sendEmail');
 // Create token
 const generateTokens = (id) => {
   const accessToken = jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -52,6 +52,7 @@ exports.register = async (req, res, next) => {
       });
 
     } catch (error) {
+      console.error("CHI TIẾT LỖI GỬI MAIL:", error);
       await User.findByIdAndDelete(user._id);
       return res.status(500).json({ message: "Không thể gửi email OTP. Vui lòng thử lại." });
     }
