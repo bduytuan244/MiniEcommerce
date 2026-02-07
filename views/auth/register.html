@@ -4,13 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng ký tài khoản</title>
-    <link rel="stylesheet" href="../assets/css/style.css"> <style>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <style>
         body { display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f4f4; }
         .auth-box { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 350px; }
         input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;}
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px;}
+        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; font-size: 16px;}
         button:hover { background: #0056b3; }
-        .link { text-align: center; margin-top: 10px; display: block; }
+        .link { text-align: center; margin-top: 10px; display: block; text-decoration: none; color: #007bff; }
+        .link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -20,17 +22,30 @@
             <input type="text" id="name" placeholder="Họ và tên" required>
             <input type="email" id="email" placeholder="Email" required>
             <input type="password" id="password" placeholder="Mật khẩu (min 6 ký tự)" required>
-            <button type="submit">Đăng ký</button>
+            
+            <button type="submit" id="btn-submit">Đăng ký</button>
         </form>
+
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+
+        <a href="verify-otp.html" class="link" style="color: green; font-weight: bold;">
+            Tôi đã có mã OTP -> Nhập ngay
+        </a>
+
         <a href="login.html" class="link">Đã có tài khoản? Đăng nhập</a>
     </div>
 
     <script>
         document.getElementById('register-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
+            e.preventDefault(); 
+            
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const btnSubmit = document.getElementById('btn-submit');
+
+            btnSubmit.innerText = "Đang xử lý...";
+            btnSubmit.disabled = true;
 
             try {
                 const res = await fetch('http://localhost:5000/api/auth/register', {
@@ -41,16 +56,23 @@
                 
                 const data = await res.json();
                 
+                btnSubmit.innerText = "Đăng ký";
+                btnSubmit.disabled = false;
+
                 if (res.ok) {
-                    alert(data.message); 
                     localStorage.setItem('registerEmail', email);
+                    
+                    alert("Đăng ký thành công! Đang chuyển đến trang nhập OTP...");
+
                     window.location.href = 'verify-otp.html';
                 } else {
-                    alert(data.message);
+                    alert("Lỗi: " + data.message);
                 }
             } catch (error) {
                 console.error(error);
-                alert('Lỗi kết nối Server');
+                alert('Lỗi kết nối Server! Vui lòng kiểm tra lại console.');
+                btnSubmit.innerText = "Đăng ký";
+                btnSubmit.disabled = false;
             }
         });
     </script>
