@@ -31,14 +31,16 @@ const userSchema = new mongoose.Schema({
   refreshToken: { type: String }
 }, { timestamps: true });
 
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () { // ❌ Không truyền chữ next vào đây nữa
+  // Nếu mật khẩu không bị thay đổi (ví dụ: chỉ cập nhật token/otp) thì bỏ qua
   if (!this.isModified('password')) {
-    next();
+    return; // ✅ Dùng return thay vì next()
   }
+  
+  // Chỉ mã hóa khi mật khẩu thực sự bị thay đổi hoặc tạo mới
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
-
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
