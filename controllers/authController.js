@@ -4,7 +4,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/sendEmail');
 
-// --- Helper: Tạo Token ---
 const generateTokens = (id) => {
   const accessToken = jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE,
@@ -16,7 +15,7 @@ const generateTokens = (id) => {
 };
 
 // 1. REGISTER
-exports.register = async (req, res) => { // ❌ Bỏ tham số next
+exports.register = async (req, res) => { 
   try {
     const { name, email, password } = req.body;
 
@@ -28,12 +27,10 @@ exports.register = async (req, res) => { // ❌ Bỏ tham số next
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpire = Date.now() + 10 * 60 * 1000;
 
-    // Tạo user tạm
     const user = await User.create({
       name, email, password, otp, otpExpire, isVerified: false
     });
 
-    // Gửi mail
     try {
       await sendEmail({
         email: user.email,
@@ -48,7 +45,6 @@ exports.register = async (req, res) => { // ❌ Bỏ tham số next
 
     } catch (emailError) {
       console.error("Lỗi gửi mail:", emailError);
-      // Nếu gửi mail lỗi thì xóa user vừa tạo để họ đăng ký lại được
       await User.findByIdAndDelete(user._id);
       return res.status(500).json({ message: "Lỗi gửi email OTP. Vui lòng thử lại sau." });
     }
@@ -60,11 +56,10 @@ exports.register = async (req, res) => { // ❌ Bỏ tham số next
 };
 
 // 2. VERIFY OTP
-exports.verifyAccount = async (req, res) => { // ❌ Bỏ tham số next
+exports.verifyAccount = async (req, res) => { 
   try {
     const { email, otp } = req.body;
     
-    // Tìm user có email, otp khớp VÀ chưa hết hạn
     const user = await User.findOne({
       email, 
       otp, 
@@ -102,7 +97,7 @@ exports.verifyAccount = async (req, res) => { // ❌ Bỏ tham số next
 };
 
 // 3. LOGIN
-exports.login = async (req, res) => { // ❌ Bỏ tham số next
+exports.login = async (req, res) => { 
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ message: "Thiếu email/pass" });
@@ -179,7 +174,6 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
     await user.save({ validateBeforeSave: false });
 
-    // Sửa lại đường dẫn reset password cho đúng Frontend
     const resetUrl = `http://localhost:5000/auth/reset-password.html?token=${resetToken}`;
     
     try {

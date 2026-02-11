@@ -1,16 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Kiểm tra đăng nhập (Bắt buộc phải có token mới được mua)
     const token = localStorage.getItem('token');
     if (!token) {
-        alert('⚠️ Bạn cần đăng nhập để tiến hành thanh toán!');
+        alert('Bạn cần đăng nhập để tiến hành thanh toán!');
         window.location.href = '../auth/login.html';
-        return; // Dừng lại không chạy code bên dưới nữa
+        return; 
     }
 
     // Load Header & Footer
     fetch('../layouts/header.html').then(res => res.text()).then(html => {
         document.getElementById('header').innerHTML = html;
-        checkLoginState(); // Hàm này từ utils.js
+        checkLoginState(); 
     });
     fetch('../layouts/footer.html').then(res => res.text()).then(html => {
         document.getElementById('footer').innerHTML = html;
@@ -24,17 +23,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Tự động điền tên người dùng nếu đã lưu trong localStorage
     const userStr = localStorage.getItem('user');
     if(userStr) {
         const userData = JSON.parse(userStr);
         document.getElementById('shippingName').value = userData.name || '';
     }
 
-    // Tạm thời lấy tổng tiền từ localStorage (đã lưu ở trang cart.js)
-    // Thực tế chuẩn nhất là backend sẽ tự tính lại tổng tiền dựa trên ID sản phẩm
     const totalAmount = localStorage.getItem('cartTotal') || 0;
-    document.getElementById('final-total').innerText = formatMoney(totalAmount); // formatMoney từ utils.js
+    document.getElementById('final-total').innerText = formatMoney(totalAmount); 
     
     // Hiển thị số lượng món hàng tóm tắt
     document.getElementById('order-items-summary').innerHTML = `
@@ -51,9 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSubmit.innerText = 'Đang xử lý...';
         btnSubmit.disabled = true;
 
-        // Chuẩn bị dữ liệu gửi xuống Backend
         const orderData = {
-            orderItems: cart, // Gửi mảng {productId, qty}
+            orderItems: cart,
             shippingInfo: {
                 address: document.getElementById('shippingAddress').value,
                 phone: document.getElementById('shippingPhone').value
@@ -63,7 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         try {
-            // Nhớ gọi hàm getAuthHeaders() từ utils.js để đính kèm Token
             const res = await fetch('http://localhost:5000/api/orders', {
                 method: 'POST',
                 headers: getAuthHeaders(), 
@@ -73,14 +67,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
 
             if (res.ok) {
-                alert('✅ Đặt hàng thành công!');
-                // Xóa giỏ hàng
+                alert('Đặt hàng thành công!');
                 localStorage.removeItem('cart');
                 localStorage.removeItem('cartTotal');
-                // Chuyển về trang chủ (hoặc trang lịch sử đơn hàng nếu có)
                 window.location.href = '../home/index.html';
             } else {
-                alert('❌ Lỗi đặt hàng: ' + data.message);
+                alert('Lỗi đặt hàng: ' + data.message);
                 btnSubmit.innerText = 'Xác nhận Đặt hàng';
                 btnSubmit.disabled = false;
             }

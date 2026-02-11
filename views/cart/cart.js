@@ -4,13 +4,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const headerContainer = document.getElementById('header');
     const footerContainer = document.getElementById('footer');
 
-    // 1. Load Header & Footer
     async function loadLayout() {
         try {
             const headRes = await fetch('../layouts/header.html');
             if(headRes.ok) {
                 headerContainer.innerHTML = await headRes.text();
-                // Gọi hàm từ utils.js
                 if(typeof checkLoginState === 'function') checkLoginState(); 
             }
             const footRes = await fetch('../layouts/footer.html');
@@ -18,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { console.error("Lỗi load layout:", e); }
     }
 
-    // 2. Load Giỏ hàng
     async function loadCart() {
         let cart = JSON.parse(localStorage.getItem('cart')) || [];
 
@@ -29,15 +26,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            // Gọi API lấy thông tin chi tiết từng sản phẩm
             const cartDetails = await Promise.all(cart.map(async (item) => {
                 try {
                     const res = await fetch(`http://localhost:5000/api/products/${item.productId}`);
-                    if (!res.ok) return null; // Nếu sản phẩm bị xóa (Lỗi 404), trả về null
+                    if (!res.ok) return null; 
                     
                     const data = await res.json();
-                    // API của bạn trả về { success: true, product: {...} } hay trực tiếp { _id: ... } ?
-                    // Thường thì nó nằm trong data.product nếu trả về theo cấu trúc chuẩn
+
                     const product = data.product || data; 
                     
                     return { 
@@ -49,10 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }));
 
-            // Lọc bỏ các sản phẩm null (sản phẩm ma đã bị xóa)
             const validItems = cartDetails.filter(item => item !== null);
 
-            // Cập nhật lại localStorage nếu có sản phẩm ma bị xóa đi
             if (validItems.length !== cart.length) {
                 const newCart = validItems.map(i => ({ productId: i._id, qty: i.qty }));
                 localStorage.setItem('cart', JSON.stringify(newCart));
@@ -72,7 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 3. Render ra bảng
     function renderCart(items) {
         let total = 0;
         cartBody.innerHTML = items.map(item => {
@@ -103,15 +95,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
 
         totalPriceEl.innerText = total.toLocaleString('vi-VN') + ' đ';
-        localStorage.setItem('cartTotal', total); // Lưu lại cho trang Checkout
+        localStorage.setItem('cartTotal', total); 
     }
 
-    // Gọi hàm
     loadLayout();
     loadCart();
 });
 
-// --- CÁC HÀM GLOBAL (Nằm ngoài DOMContentLoaded để HTML có thể gọi được) ---
 
 function updateQty(productId, newQty) {
     let cart = JSON.parse(localStorage.getItem('cart')) || [];
