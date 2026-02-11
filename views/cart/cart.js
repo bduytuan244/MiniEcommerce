@@ -10,11 +10,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const headRes = await fetch('../layouts/header.html');
             if(headRes.ok) {
                 headerContainer.innerHTML = await headRes.text();
-                checkLoginState();
+                // Gọi hàm từ utils.js
+                if(typeof checkLoginState === 'function') checkLoginState(); 
             }
             const footRes = await fetch('../layouts/footer.html');
             if(footRes.ok) footerContainer.innerHTML = await footRes.text();
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Lỗi load layout:", e); }
     }
 
     // 2. Load Giỏ hàng
@@ -27,19 +28,43 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        cartBody.innerHTML = '<tr><td colspan="5" style="text-align:center">Đang tải dữ liệu...</td></tr>';
-
         try {
+            // Gọi API lấy thông tin chi tiết từng sản phẩm
             const cartDetails = await Promise.all(cart.map(async (item) => {
-                const res = await fetch(`http://localhost:5000/api/products/${item.productId}`);
-                const product = await res.json();
-                return { 
-                    ...product, 
-                    qty: item.qty 
-                };
+                try {
+                    const res = await fetch(`http://localhost:5000/api/products/${item.productId}`);
+                    if (!res.ok) return null; // Nếu sản phẩm bị xóa (Lỗi 404), trả về null
+                    
+                    const data = await res.json();
+                    // API của bạn trả về { success: true, product: {...} } hay trực tiếp { _id: ... } ?
+                    // Thường thì nó nằm trong data.product nếu trả về theo cấu trúc chuẩn
+                    const product = data.product || data; 
+                    
+                    return { 
+                        ...product, 
+                        qty: item.qty 
+                    };
+                } catch (err) {
+                    return null;
+                }
             }));
 
-            renderCart(cartDetails);
+            // Lọc bỏ các sản phẩm null (sản phẩm ma đã bị xóa)
+            const validItems = cartDetails.filter(item => item !== null);
+
+            // Cập nhật lại localStorage nếu có sản phẩm ma bị xóa đi
+            if (validItems.length !== cart.length) {
+                const newCart = validItems.map(i => ({ productId: i._id, qty: i.qty }));
+                localStorage.setItem('cart', JSON.stringify(newCart));
+            }
+
+            if (validItems.length === 0) {
+                cartBody.innerHTML = '<tr><td colspan="5" style="text-align:center">Giỏ hàng trống</td></tr>';
+                totalPriceEl.innerText = '0 đ';
+                return;
+            }
+
+            renderCart(validItems);
 
         } catch (error) {
             console.error("Lỗi tải giỏ hàng:", error);
@@ -47,10 +72,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 3. Hàm hiển thị ra bảng HTML
+    // 3. Render ra bảng
     function renderCart(items) {
         let total = 0;
-        cartBody.innerHTML = items.map((item, index) => {
+        cartBody.innerHTML = items.map(item => {
             const subtotal = item.price * item.qty;
             total += subtotal;
             
@@ -78,46 +103,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
 
         totalPriceEl.innerText = total.toLocaleString('vi-VN') + ' đ';
-        
-        localStorage.setItem('cartTotal', total);
+        localStorage.setItem('cartTotal', total); // Lưu lại cho trang Checkout
     }
 
+    // Gọi hàm
     loadLayout();
     loadCart();
 });
 
-// 4. Cập nhật số lượng
+// --- CÁC HÀM GLOBAL (Nằm ngoài DOMContentLoaded để HTML có thể gọi được) ---
+
 function updateQty(productId, newQty) {
     let cart = JSON.parse(localStorage.getItem('cart')) || [];
     const item = cart.find(i => i.productId === productId);
     
     if (item) {
         item.qty = parseInt(newQty);
-        if (item.qty <= 0) item.qty = 1;
+        if (item.qty <= 0) item.qty = 1; 
         localStorage.setItem('cart', JSON.stringify(cart));
-        
         location.reload(); 
     }
 }
 
-// 5. Xóa sản phẩm
 function removeItem(productId) {
     if(!confirm("Bạn chắc chắn muốn xóa sản phẩm này?")) return;
-
     let cart = JSON.parse(localStorage.getItem('cart')) || [];
     cart = cart.filter(i => i.productId !== productId);
-    
     localStorage.setItem('cart', JSON.stringify(cart));
     location.reload();
-}
-
-// Hàm check login
-function checkLoginState() {
-    const user = localStorage.getItem('user');
-    const loginLink = document.querySelector('nav a[href*="login"]'); 
-    if (user && loginLink) {
-        const userData = JSON.parse(user);
-        loginLink.innerHTML = `Xin chào, ${userData.name}`;
-        loginLink.href = "#"; 
-    }
 }
