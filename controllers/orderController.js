@@ -64,14 +64,6 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-exports.getMyOrders = async (req, res) => {
-  try {
-    const orders = await Order.find({ user: req.user.id }).sort({ createdAt: -1 });
-    res.status(200).json(orders);
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
-  }
-};
 exports.getOrders = async (req, res) => {
   try {
     const orders = await Order.find().populate('user', 'name email').sort({ createdAt: -1 });
@@ -136,5 +128,14 @@ exports.updateOrderToPaid = async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
+exports.getMyOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ user: req.user.id }).sort({ createdAt: -1 });
+    res.status(200).json(orders);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi lấy danh sách đơn hàng" });
   }
 };
