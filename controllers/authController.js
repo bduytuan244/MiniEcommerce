@@ -70,13 +70,11 @@ exports.verifyAccount = async (req, res) => {
       return res.status(400).json({ message: "Mã OTP sai hoặc đã hết hạn" });
     }
 
-    // Kích hoạt
     user.isVerified = true;
     user.otp = undefined;
     user.otpExpire = undefined;
     await user.save({ validateBeforeSave: false });
 
-    // Tạo token đăng nhập luôn
     const tokens = generateTokens(user._id);
     user.refreshToken = tokens.refreshToken;
     await user.save({ validateBeforeSave: false });
