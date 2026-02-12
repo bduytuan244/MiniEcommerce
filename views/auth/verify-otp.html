@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác thực OTP</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <style>
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f4f4; }
+        .auth-box { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 350px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;}
+        button { width: 100%; padding: 10px; background: #28a745; color: white; border: none; cursor: pointer; border-radius: 4px;}
+    </style>
+</head>
+<body>
+    <div class="auth-box">
+        <h2 style="text-align: center;">Nhập mã OTP</h2>
+        <p style="text-align: center; font-size: 0.9em; color: #666;">Mã xác thực đã được gửi đến email của bạn.</p>
+        
+        <form id="otp-form">
+            <input type="email" id="email" placeholder="Email" readonly style="background: #eee;">
+            <input type="text" id="otp" placeholder="Nhập mã 6 số (VD: 123456)" required>
+            <button type="submit">Kích hoạt tài khoản</button>
+        </form>
+    </div>
+
+    <script>
+        const savedEmail = localStorage.getItem('registerEmail');
+        if(savedEmail) document.getElementById('email').value = savedEmail;
+
+        document.getElementById('otp-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const otp = document.getElementById('otp').value;
+
+            try {
+                const res = await fetch('http://localhost:5000/api/auth/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, otp })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    alert('✅ Kích hoạt thành công! Đang chuyển hướng...');
+                    
+                    localStorage.setItem('token', data.accessToken);
+                    localStorage.setItem('refreshToken', data.refreshToken);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+
+                    window.location.href = '../home/index.html';
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Lỗi kết nối Server');
+            }
+        });
+    </script>
+</body>
+</html>

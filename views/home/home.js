@@ -3,13 +3,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const headerContainer = document.getElementById('header');
     const footerContainer = document.getElementById('footer');
 
-    // Load Header
+    // 1. Load Header
     async function loadHeader() {
         try {
             const res = await fetch('../layouts/header.html'); 
             if (res.ok) {
                 const html = await res.text();
                 headerContainer.innerHTML = html;
+                
                 checkLoginState(); 
             } else {
                 console.error('Không tìm thấy file header');
@@ -19,20 +20,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Load Footer
+    // 2. Load Footer
     async function loadFooter() {
         try {
             const res = await fetch('../layouts/footer.html');
             if (res.ok) {
-                const html = await res.text();
-                footerContainer.innerHTML = html;
+                footerContainer.innerHTML = await res.text();
             }
         } catch (error) {
             console.error('Lỗi load footer:', error);
         }
     }
 
-    // Load Products
+    // 3. Load Products
     async function loadProducts() {
         try {
             const res = await fetch('http://localhost:5000/api/products');
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </a>
                             
                             <button class="btn-add-cart" onclick="addToCart('${product._id}')">
-                                Thêm
+                                🛒 Thêm
                             </button>
                         </div>
                     </div>
@@ -82,7 +82,9 @@ document.addEventListener('DOMContentLoaded', () => {
     loadProducts();
 });
 
-// Cart
+
+
+// 4. Hàm Thêm vào giỏ
 function addToCart(productId) {
     let cart = JSON.parse(localStorage.getItem('cart')) || [];
     
@@ -95,18 +97,30 @@ function addToCart(productId) {
     }
 
     localStorage.setItem('cart', JSON.stringify(cart));
-    
     alert('Đã thêm sản phẩm vào giỏ hàng!');
 }
 
-// Check Login
+// 5. Hàm Check Login & Xử lý Đăng xuất
 function checkLoginState() {
     const user = localStorage.getItem('user');
-    const loginLink = document.querySelector('nav a[href="login.html"]'); 
+
+    const loginLink = document.querySelector('nav a[href*="login"]'); 
     
     if (user && loginLink) {
         const userData = JSON.parse(user);
-        loginLink.textContent = `Xin chào, ${userData.name}`;
+        
+        loginLink.innerHTML = `👋 Xin chào, ${userData.name} (Thoát)`;
         loginLink.href = "#"; 
+        
+        loginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            
+            alert('Đã đăng xuất thành công!');
+            window.location.reload(); 
+        });
     }
 }
