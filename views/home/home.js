@@ -4,6 +4,7 @@ let currentKeyword = '';
 let currentSort = '-createdAt';
 let currentMinPrice = '';
 let currentMaxPrice = '';
+let currentBrand = '';
 
 document.addEventListener('DOMContentLoaded', () => {
     const headerContainer = document.getElementById('header');
@@ -31,6 +32,8 @@ async function loadProducts() {
         let url = `http://localhost:5000/api/products?page=${currentPage}&limit=8&sort=${currentSort}`;
 
         if (currentKeyword) url += `&keyword=${currentKeyword}`;
+
+        if (currentBrand) url += `&brand=${currentBrand}`;
 
         if (currentMinPrice) url += `&price[gte]=${currentMinPrice}`;
         if (currentMaxPrice) url += `&price[lte]=${currentMaxPrice}`;
@@ -105,6 +108,7 @@ function renderPagination(totalPages, page) {
 function applyFilters() {
     currentKeyword = document.getElementById('search-keyword').value.trim();
     currentSort = document.getElementById('sort-by').value;
+    currentBrand = document.getElementById('filter-brand').value;
     const priceRange = document.getElementById('filter-price').value;
 
     if (priceRange) {
