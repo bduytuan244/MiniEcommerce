@@ -1,30 +1,35 @@
 const Review = require('../models/Review');
-const Order = require('../models/Order');
+const Product = require('../models/Product');
 
 exports.addReview = async (req, res) => {
   try {
-    const { productId, rating, comment } = req.body;
-    
-    
-    const newReview = new Review({
-      user: req.user.id,
-      product: productId,
-      rating,
-      comment
+    const { rating, comment, productId } = req.body; 
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
+    }
+
+    const review = await Review.create({
+      name: req.user.name,
+      rating: Number(rating),
+      comment,
+      user: req.user._id,
+      product: productId
     });
 
-    await newReview.save();
-    res.status(201).json({ message: "Đã gửi đánh giá!", review: newReview });
+    res.status(201).json({ message: 'Đánh giá thành công!', review });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server (Có thể bạn đã review rồi)", error: error.message });
+    res.status(500).json({ message: 'Lỗi Server: ' + error.message });
   }
 };
 
 exports.getProductReviews = async (req, res) => {
   try {
-    const reviews = await Review.find({ product: req.params.productId }).populate('user', 'name');
+    const reviews = await Review.find({ product: req.params.productId })
+                            .sort({ createdAt: -1 });
     res.json(reviews);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    res.status(500).json({ message: 'Lỗi tải đánh giá' });
   }
 };

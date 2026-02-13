@@ -1,4 +1,5 @@
 const Product = require('../models/Products');
+const Review = require('../models/Review');
 
 // Create
 exports.createProduct = async (req, res) => {
@@ -141,3 +142,4 @@ exports.deleteProduct = async (req, res) => {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
+

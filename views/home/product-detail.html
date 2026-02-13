@@ -40,17 +40,69 @@
         }
         .btn-buy:hover { background: #218838; }
         .stock-status { color: #666; font-style: italic; }
+
+        .review-section {
+            max-width: 1000px; 
+            margin: 40px auto; 
+            padding: 20px; 
+            background: white; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .review-form {
+            margin-bottom: 30px; 
+            padding-bottom: 20px; 
+            border-bottom: 1px dashed #ccc;
+        }
+        .review-input {
+            width: 100%; 
+            padding: 10px; 
+            margin-bottom: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
     <div id="header"></div>
 
     <div id="detail-content" class="detail-container">
-        <p>Đang tải thông tin...</p>
+        <p style="text-align: center; width: 100%;">Đang tải thông tin...</p>
+    </div>
+
+    <div id="review-section" class="review-section">
+        <h2>⭐ Đánh giá sản phẩm</h2>
+        
+        <div class="review-form">
+            <h3>Viết đánh giá của bạn</h3>
+            <form id="form-review">
+                <div style="margin-bottom: 10px;">
+                    <label style="font-weight: bold;">Đánh giá:</label>
+                    <select id="rating" class="review-input" style="width: auto;">
+                        <option value="5">5 sao - Tuyệt vời (⭐⭐⭐⭐⭐)</option>
+                        <option value="4">4 sao - Rất tốt (⭐⭐⭐⭐)</option>
+                        <option value="3">3 sao - Bình thường (⭐⭐⭐)</option>
+                        <option value="2">2 sao - Tệ (⭐⭐)</option>
+                        <option value="1">1 sao - Rất tệ (⭐)</option>
+                    </select>
+                </div>
+                <div>
+                    <textarea id="comment" rows="3" class="review-input" placeholder="Chia sẻ cảm nhận của bạn về sản phẩm..." required></textarea>
+                </div>
+                <button type="submit" style="background: #ffc107; color: #333; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                    Gửi đánh giá
+                </button>
+            </form>
+        </div>
+
+        <div id="review-list">
+            <p style="text-align: center; color: #666;">Đang tải đánh giá...</p>
+        </div>
     </div>
 
     <div id="footer"></div>
 
+    <script src="../utils.js"></script>
     <script src="product-detail.js"></script>
 </body>
 </html>
