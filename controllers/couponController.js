@@ -2,30 +2,48 @@ const Coupon = require('../models/Coupon');
 
 exports.createCoupon = async (req, res) => {
   try {
-    const { code, discount, expiryDate } = req.body;
-    const newCoupon = new Coupon({ code, discount, expiryDate });
-    await newCoupon.save();
-    res.status(201).json({ message: "Tạo mã giảm giá thành công!", coupon: newCoupon });
+    const { code, discount, daysToExpire } = req.body;
+    
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + daysToExpire);
+
+    const coupon = await Coupon.create({
+      code,
+      discount,
+      expiryDate
+    });
+
+    res.status(201).json(coupon);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    res.status(400).json({ message: 'Lỗi tạo mã: ' + error.message });
   }
 };
 
-exports.applyCoupon = async (req, res) => {
+exports.checkCoupon = async (req, res) => {
   try {
     const { code } = req.body;
     const coupon = await Coupon.findOne({ code: code.toUpperCase() });
 
     if (!coupon) {
-      return res.status(404).json({ message: "Mã giảm giá không tồn tại" });
+      return res.status(404).json({ message: 'Mã giảm giá không tồn tại' });
+    }
+
+    if (!coupon.isActive) {
+      return res.status(400).json({ message: 'Mã này đã bị vô hiệu hóa' });
     }
 
     if (new Date() > coupon.expiryDate) {
-      return res.status(400).json({ message: "Mã giảm giá đã hết hạn" });
+      return res.status(400).json({ message: 'Mã này đã hết hạn' });
     }
 
-    res.json({ message: "Áp dụng mã thành công!", discount: coupon.discount });
+    res.status(200).json({
+      success: true,
+      discount: coupon.discount,
+      code: coupon.code,
+      message: `Áp dụng mã thành công! Giảm ${coupon.discount}%`
+    });
+
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    res.status(500).json({ message: 'Lỗi server' });
   }
 };

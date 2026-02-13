@@ -83,4 +83,58 @@ document.addEventListener('DOMContentLoaded', () => {
             btnSubmit.disabled = false;
         }
     });
+    originalTotal = Number(localStorage.getItem('cartTotal') || 0);
+    document.getElementById('final-total').innerText = formatMoney(originalTotal);
 });
+
+async function applyCoupon() {
+    const code = document.getElementById('coupon-code').value.trim();
+    const msgEl = document.getElementById('coupon-message');
+    
+    if (!code) {
+        msgEl.style.color = 'red';
+        msgEl.innerText = "Vui lòng nhập mã!";
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://localhost:5000/api/coupons/check', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ code })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            currentDiscount = data.discount; 
+            
+            const discountAmount = originalTotal * (currentDiscount / 100);
+            const newTotal = originalTotal - discountAmount;
+            
+            msgEl.style.color = 'green';
+            msgEl.innerText = `${data.message}`;
+            
+            document.getElementById('final-total').innerHTML = `
+                <span style="text-decoration: line-through; color: #999; font-size: 0.8em;">${formatMoney(originalTotal)}</span>
+                <br>
+                <span>${formatMoney(newTotal)}</span>
+            `;
+            
+            document.getElementById('coupon-code').disabled = true;
+            
+        } else {
+            currentDiscount = 0; 
+            msgEl.style.color = 'red';
+            msgEl.innerText = `${data.message}`;
+            document.getElementById('final-total').innerText = formatMoney(originalTotal);
+        }
+    } catch (error) {
+        console.error(error);
+        msgEl.innerText = "Lỗi kết nối Server";
+    }
+}
