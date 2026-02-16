@@ -1,28 +1,26 @@
 const Order = require('../models/Order');
-const Product = require('../models/Product'); // ⚠️ Đảm bảo tên file model là Product.js (số ít) hoặc Products.js tùy thư mục của bạn
+const Product = require('../models/Products'); 
+const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
 
-// 1. TẠO ĐƠN HÀNG (Đã sửa lỗi Enum & Address)
 exports.createOrder = async (req, res) => {
   try {
     const {
       orderItems,
-      shippingInfo,    // Frontend gửi cục này { address, phone, ... }
+      shippingInfo,
       paymentMethod,
     } = req.body;
 
-    console.log("📦 Dữ liệu nhận:", req.body);
+    console.log("Dữ liệu nhận:", req.body);
 
-    // Kiểm tra đầu vào cơ bản
     if (!orderItems || orderItems.length === 0) {
       return res.status(400).json({ message: "Giỏ hàng rỗng" });
     }
 
     if (!shippingInfo || !shippingInfo.address || !shippingInfo.phone) {
-        return res.status(400).json({ message: "Thiếu địa chỉ hoặc số điện thoại giao hàng" });
+        return res.status(400).json({ message: "Thiếu địa chỉ hoặc số điện thoại" });
     }
 
-    // --- BƯỚC 1: XỬ LÝ SẢN PHẨM & TÍNH GIÁ ---
     const orderItemsProcessed = [];
     let calculatedTotalPrice = 0;
 
@@ -37,7 +35,6 @@ exports.createOrder = async (req, res) => {
       const itemTotalPrice = dbProduct.price * item.qty;
       calculatedTotalPrice += itemTotalPrice;
 
-      // Tạo item đúng chuẩn Schema
       orderItemsProcessed.push({
         product: dbProduct._id,
         name: dbProduct.name,
@@ -47,146 +44,122 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    // --- BƯỚC 2: TẠO ORDER (Khớp với Model Order mới) ---
     const order = new Order({
       orderItems: orderItemsProcessed,
-      
-      // Map User & Tên khách (Lấy từ Token hoặc ShippingInfo nếu Token thiếu name)
       user: req.user._id || req.user.id,
-      customerName: req.user.name || shippingInfo.fullName || "Khách hàng", 
-
-      // Map Địa chỉ & SĐT (Bung ra root theo yêu cầu Model)
+      customerName: req.user.name || shippingInfo.fullName || "Khách hàng",
+      
       address: shippingInfo.address,
       phone: shippingInfo.phone,
+      shippingAddress: shippingInfo,
 
       paymentMethod,
       itemsPrice: calculatedTotalPrice,
       shippingPrice: 0,
       totalPrice: calculatedTotalPrice, 
-      
       isPaid: false,
-      
-      // 👇 QUAN TRỌNG: Phải dùng Tiếng Việt để khớp với Enum trong Model
-      status: 'Chờ xác nhận' 
+      status: 'Chờ xác nhận'
     });
 
     const createdOrder = await order.save();
-    console.log("✅ Tạo đơn thành công:", createdOrder._id);
+    console.log("Tạo đơn thành công:", createdOrder._id);
 
-    // --- BƯỚC 3: GỬI EMAIL ---
     try {
-        if (typeof sendEmail === 'function') {
+        const userDetail = await User.findById(req.user._id || req.user.id);
+        const emailToSend = userDetail ? userDetail.email : req.user.email;
+        const nameToSend = userDetail ? userDetail.name : req.user.name;
+
+        if (emailToSend && typeof sendEmail === 'function') {
             await sendEmail({
-                email: req.user.email,
+                email: emailToSend, 
                 subject: `Xác nhận đơn hàng #${createdOrder._id}`,
-                message: `Cảm ơn bạn đã đặt hàng. Tổng tiền: ${calculatedTotalPrice.toLocaleString()}đ`
+                message: `Xin chào ${nameToSend},\nCảm ơn bạn đã đặt hàng. Tổng tiền: ${calculatedTotalPrice.toLocaleString()}đ`
             });
+            console.log(`Đã gửi email tới: ${emailToSend}`);
+        } else {
+            console.log("Không tìm thấy Email người dùng, bỏ qua gửi mail.");
         }
     } catch (err) {
-        console.error("⚠️ Lỗi gửi mail:", err.message);
+        console.error("Lỗi gửi mail (đơn vẫn tạo thành công):", err.message);
     }
 
     res.status(201).json(createdOrder);
 
   } catch (error) {
-    console.error("❌ LỖI CONTROLLER:", error);
-    res.status(500).json({ message: "Lỗi tạo đơn hàng: " + error.message });
+    console.error("LỖI TẠO ĐƠN:", error);
+    res.status(500).json({ message: "Lỗi: " + error.message });
   }
 };
 
-// 2. LẤY DANH SÁCH ĐƠN HÀNG
 exports.getOrders = async (req, res) => {
-  try {
-    const orders = await Order.find()
-        .populate('user', 'id name email') 
-        .sort({ createdAt: -1 });
-    res.status(200).json(orders);
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
-  }
+    try {
+        const orders = await Order.find().populate('user', 'id name email').sort({ createdAt: -1 });
+        res.status(200).json(orders);
+    } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
-// 3. CẬP NHẬT TRẠNG THÁI (Map từ Anh -> Việt)
 exports.updateOrderStatus = async (req, res) => {
-  try {
-    const order = await Order.findById(req.params.id);
-    if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    try {
+        const order = await Order.findById(req.params.id);
+        if (!order) return res.status(404).json({ message: "Không tìm thấy đơn" });
 
-    // 👇 Bảng dịch trạng thái (Frontend gửi Anh -> Lưu vào DB Việt)
-    const statusMap = {
-        'Pending': 'Chờ xác nhận',
-        'Processing': 'Đang đóng gói',
-        'Shipped': 'Đang vận chuyển',
-        'Delivered': 'Hoàn thành',
-        'Cancelled': 'Đã hủy',
-        'Returned': 'Trả hàng'
-    };
+        const statusMap = {
+            'Pending': 'Chờ xác nhận',
+            'Processing': 'Đang đóng gói',
+            'Shipped': 'Đang vận chuyển',
+            'Delivered': 'Hoàn thành',
+            'Cancelled': 'Đã hủy',
+            'Returned': 'Trả hàng'
+        };
+        const newStatus = statusMap[req.body.status] || req.body.status;
 
-    // Lấy trạng thái tiếng Việt (nếu không tìm thấy trong map thì giữ nguyên giá trị gửi lên)
-    const newStatus = statusMap[req.body.status] || req.body.status;
-
-    // Logic trả hàng vào kho khi Hủy
-    if (newStatus === 'Đã hủy' || newStatus === 'Trả hàng') { 
-      if (order.status !== 'Đã hủy' && order.status !== 'Trả hàng') {
-        for (const item of order.orderItems) {
-          const product = await Product.findById(item.product);
-          if (product) {
-            product.stock = (product.stock || 0) + item.qty; 
-            await product.save();
-          }
+        if (newStatus === 'Đã hủy' || newStatus === 'Trả hàng') {
+             if (order.status !== 'Đã hủy' && order.status !== 'Trả hàng') {
+                for (const item of order.orderItems) {
+                    const product = await Product.findById(item.product);
+                    if (product) {
+                        product.stock = (product.stock || 0) + item.qty;
+                        await product.save();
+                    }
+                }
+            }
         }
-      }
-    }
-
-    order.status = newStatus;
-
-    if (newStatus === 'Hoàn thành') {
-        order.isDelivered = true;
-        order.deliveredAt = Date.now();
-        order.isPaid = true;
-        order.paidAt = Date.now();
-    }
-
-    const updatedOrder = await order.save();
-    res.json({ message: `Đã cập nhật trạng thái: ${newStatus}`, order: updatedOrder });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Lỗi server", error: error.message });
-  }
+        order.status = newStatus;
+        if (newStatus === 'Hoàn thành') {
+            order.isDelivered = true;
+            order.deliveredAt = Date.now();
+            order.isPaid = true;
+            order.paidAt = Date.now();
+        }
+        await order.save();
+        res.json({ message: "Cập nhật thành công", order });
+    } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
-// 4. CẬP NHẬT THANH TOÁN (Cho online payment)
 exports.updateOrderToPaid = async (req, res) => {
-  try {
-    const order = await Order.findById(req.params.id);
-
-    if (order) {
-      order.isPaid = true;
-      order.paidAt = Date.now();
-      order.paymentResult = {
-        id: req.body.id || 'MOCK_ID', 
-        status: 'COMPLETED',
-        update_time: String(new Date()),
-        email_address: req.body.email_address || req.user.email,
-      };
-
-      const updatedOrder = await order.save();
-      res.json(updatedOrder);
-    } else {
-      res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-    }
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
-  }
+    try {
+        const order = await Order.findById(req.params.id);
+        if (order) {
+            order.isPaid = true;
+            order.paidAt = Date.now();
+            order.paymentResult = {
+                id: req.body.id,
+                status: 'COMPLETED',
+                update_time: String(new Date()),
+                email_address: req.body.email_address
+            };
+            const updatedOrder = await order.save();
+            res.json(updatedOrder);
+        } else {
+            res.status(404).json({ message: "Order not found" });
+        }
+    } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
-// 5. LẤY ĐƠN HÀNG CỦA TÔI
 exports.getMyOrders = async (req, res) => {
-  try {
-    const orders = await Order.find({ user: req.user._id || req.user.id }).sort({ createdAt: -1 });
-    res.status(200).json(orders);
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi lấy danh sách đơn hàng" });
-  }
+    try {
+        const orders = await Order.find({ user: req.user._id || req.user.id }).sort({ createdAt: -1 });
+        res.status(200).json(orders);
+    } catch (error) { res.status(500).json({ message: error.message }); }
 };
+
