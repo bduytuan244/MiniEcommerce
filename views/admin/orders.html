@@ -99,49 +99,66 @@
 
         let currentOrderId = null;
 
-        async function loadOrders() {
-            try {
-                const res = await fetch('http://localhost:5000/api/orders', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const orders = await res.json();
-                
-                const tbody = document.getElementById('order-table-body');
-                if (orders.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Chưa có đơn hàng nào</td></tr>';
-                    return;
-                }
+async function loadOrders() {
+    try {
+        const res = await fetch('http://localhost:5000/api/orders', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const data = await res.json();
 
-                tbody.innerHTML = orders.map(order => {
-                    let badgeClass = 'bg-pending';
-                    if (order.status === 'Processing') badgeClass = 'bg-processing';
-                    if (order.status === 'Shipped') badgeClass = 'bg-shipped';
-                    if (order.status === 'Delivered') badgeClass = 'bg-delivered';
-                    if (order.status === 'Cancelled') badgeClass = 'bg-cancelled';
-
-                    return `
-                        <tr>
-                            <td>#${order._id.slice(-6).toUpperCase()}</td>
-                            <td>
-                                <div>${order.user ? order.user.name : 'Khách vãng lai'}</div>
-                                <small style="color:#666">${order.user ? order.user.email : ''}</small>
-                            </td>
-                            <td>${new Date(order.createdAt).toLocaleDateString('vi-VN')}</td>
-                            <td style="font-weight:bold; color:#d32f2f;">${Number(order.totalPrice).toLocaleString('vi-VN')} đ</td>
-                            <td><span class="badge ${badgeClass}">${order.status || 'Pending'}</span></td>
-                            <td>
-                                <button onclick="openModal('${order._id}')" style="padding:5px 10px; border:1px solid #ddd; background:white; cursor:pointer; border-radius:4px;">👁️ Xem</button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-
-            } catch (error) {
-                console.error(error);
-                alert('Lỗi tải danh sách đơn hàng');
+        // 👇 [QUAN TRỌNG] Kiểm tra xem Server có trả về lỗi không
+        if (!res.ok) {
+            console.error("Chi tiết lỗi:", data);
+            alert("⚠️ Lỗi tải đơn: " + (data.message || res.statusText));
+            
+            // Nếu lỗi do hết hạn đăng nhập (401) hoặc không quyền (403) -> Đá về trang login
+            if (res.status === 401 || res.status === 403) {
+                window.location.href = 'login.html';
             }
+            return;
         }
 
+        const orders = data; // Dữ liệu đơn hàng
+        const tbody = document.getElementById('order-table-body');
+        
+        if (!orders || orders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Chưa có đơn hàng nào</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = orders.map(order => {
+            // Map trạng thái sang màu sắc
+            let badgeClass = 'bg-pending';
+            const status = order.status || 'Chờ xác nhận';
+            
+            if (status === 'Đang đóng gói') badgeClass = 'bg-processing';
+            if (status === 'Đang vận chuyển') badgeClass = 'bg-shipped';
+            if (status === 'Hoàn thành') badgeClass = 'bg-delivered';
+            if (status === 'Đã hủy' || status === 'Trả hàng') badgeClass = 'bg-cancelled';
+
+            return `
+                <tr>
+                    <td>#${order._id.slice(-6).toUpperCase()}</td>
+                    <td>
+                        <div style="font-weight:bold;">${order.customerName || (order.user ? order.user.name : 'Khách vãng lai')}</div>
+                        <small style="color:#666">${order.user ? order.user.email : ''}</small>
+                    </td>
+                    <td>${new Date(order.createdAt).toLocaleDateString('vi-VN')}</td>
+                    <td style="font-weight:bold; color:#d32f2f;">${Number(order.totalPrice).toLocaleString('vi-VN')} đ</td>
+                    <td><span class="badge ${badgeClass}">${status}</span></td>
+                    <td>
+                        <button onclick="openModal('${order._id}')" style="padding:5px 10px; border:1px solid #ddd; background:white; cursor:pointer; border-radius:4px;">👁️ Xem</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error("Lỗi JS:", error);
+        alert('❌ Lỗi kết nối hoặc xử lý dữ liệu!');
+    }
+}
         async function openModal(id) {
             currentOrderId = id;
             document.getElementById('orderModal').style.display = 'flex';
