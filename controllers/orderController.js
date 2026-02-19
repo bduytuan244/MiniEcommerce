@@ -1,140 +1,165 @@
 const Order = require('../models/Order');
 const Product = require('../models/Products'); 
+const User = require('../models/User');
+const sendEmail = require('../utils/sendEmail');
 
 exports.createOrder = async (req, res) => {
   try {
     const {
       orderItems,
-      shippingAddress,
+      shippingInfo,
       paymentMethod,
-      itemsPrice,
-      taxPrice,
-      shippingPrice,
-      totalPrice,
     } = req.body;
 
-    if (orderItems && orderItems.length === 0) {
+    console.log("Dữ liệu nhận:", req.body);
+
+    if (!orderItems || orderItems.length === 0) {
       return res.status(400).json({ message: "Giỏ hàng rỗng" });
     }
 
+    if (!shippingInfo || !shippingInfo.address || !shippingInfo.phone) {
+        return res.status(400).json({ message: "Thiếu địa chỉ hoặc số điện thoại" });
+    }
+
+    const orderItemsProcessed = [];
+    let calculatedTotalPrice = 0;
+
+    for (const item of orderItems) {
+      const productId = item.productId || item.product;
+      const dbProduct = await Product.findById(productId);
+
+      if (!dbProduct) {
+        return res.status(404).json({ message: `Sản phẩm ID ${productId} không tồn tại` });
+      }
+
+      const itemTotalPrice = dbProduct.price * item.qty;
+      calculatedTotalPrice += itemTotalPrice;
+
+      orderItemsProcessed.push({
+        product: dbProduct._id,
+        name: dbProduct.name,
+        price: dbProduct.price,
+        image: dbProduct.images && dbProduct.images[0] ? dbProduct.images[0] : '', 
+        qty: item.qty
+      });
+    }
+
     const order = new Order({
-      orderItems,
-      user: req.user._id, 
-      shippingAddress,
+      orderItems: orderItemsProcessed,
+      user: req.user._id || req.user.id,
+      customerName: req.user.name || shippingInfo.fullName || "Khách hàng",
+      
+      address: shippingInfo.address,
+      phone: shippingInfo.phone,
+      shippingAddress: shippingInfo,
+
       paymentMethod,
-      itemsPrice,
-      taxPrice,
-      shippingPrice,
-      totalPrice,
+      itemsPrice: calculatedTotalPrice,
+      shippingPrice: 0,
+      totalPrice: calculatedTotalPrice, 
+      isPaid: false,
+      status: 'Chờ xác nhận'
     });
 
     const createdOrder = await order.save();
-
-    const message = `
-      Xin chào ${req.user.name},
-
-      Cảm ơn bạn đã đặt hàng tại Mini Ecommerce!
-      Đơn hàng của bạn đã được tiếp nhận thành công.
-
-      Mã đơn hàng: ${createdOrder._id}
-      Tổng tiền: ${createdOrder.totalPrice.toLocaleString('vi-VN')} đ
-      Địa chỉ giao: ${createdOrder.shippingAddress.address}, ${createdOrder.shippingAddress.city}
-      
-      Chúng tôi sẽ sớm đóng gói và gửi hàng cho bạn.
-      
-      Trân trọng,
-      Đội ngũ Mini Ecommerce
-    `;
+    console.log("Tạo đơn thành công:", createdOrder._id);
 
     try {
-      await sendEmail({
-        email: req.user.email, 
-        subject: `Xác nhận đơn hàng #${createdOrder._id}`,
-        message: message
-      });
-      console.log("Đã gửi email xác nhận đơn hàng!");
-    } catch (error) {
-      console.error("Lỗi gửi email:", error.message);
+        const userDetail = await User.findById(req.user._id || req.user.id);
+        const emailToSend = userDetail ? userDetail.email : req.user.email;
+        const nameToSend = userDetail ? userDetail.name : req.user.name;
+
+        if (emailToSend && typeof sendEmail === 'function') {
+            await sendEmail({
+                email: emailToSend, 
+                subject: `Xác nhận đơn hàng #${createdOrder._id}`,
+                message: `Xin chào ${nameToSend},\nCảm ơn bạn đã đặt hàng. Tổng tiền: ${calculatedTotalPrice.toLocaleString()}đ`
+            });
+            console.log(`Đã gửi email tới: ${emailToSend}`);
+        } else {
+            console.log("Không tìm thấy Email người dùng, bỏ qua gửi mail.");
+        }
+    } catch (err) {
+        console.error("Lỗi gửi mail (đơn vẫn tạo thành công):", err.message);
     }
 
     res.status(201).json(createdOrder);
 
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    console.error("LỖI TẠO ĐƠN:", error);
+    res.status(500).json({ message: "Lỗi: " + error.message });
   }
 };
 
-exports.getMyOrders = async (req, res) => {
-  try {
-    const orders = await Order.find({ user: req.user.id }).sort({ createdAt: -1 });
-    res.status(200).json(orders);
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
-  }
-};
 exports.getOrders = async (req, res) => {
-  try {
-    const orders = await Order.find().populate('user', 'name email').sort({ createdAt: -1 });
-    res.status(200).json(orders);
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
-  }
+    try {
+        const orders = await Order.find().populate('user', 'id name email').sort({ createdAt: -1 });
+        res.status(200).json(orders);
+    } catch (error) { res.status(500).json({ message: error.message }); }
 };
+
 exports.updateOrderStatus = async (req, res) => {
-  try {
-    const order = await Order.findById(req.params.id);
-    if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    try {
+        const order = await Order.findById(req.params.id);
+        if (!order) return res.status(404).json({ message: "Không tìm thấy đơn" });
 
-    const newStatus = req.body.status;
+        const statusMap = {
+            'Pending': 'Chờ xác nhận',
+            'Processing': 'Đang đóng gói',
+            'Shipped': 'Đang vận chuyển',
+            'Delivered': 'Hoàn thành',
+            'Cancelled': 'Đã hủy',
+            'Returned': 'Trả hàng'
+        };
+        const newStatus = statusMap[req.body.status] || req.body.status;
 
-    if (newStatus === 'Đã hủy' || newStatus === 'Trả hàng') {
-
-      if (order.status !== 'Đã hủy' && order.status !== 'Trả hàng') {
-        for (const item of order.orderItems) {
-          const product = await Product.findById(item.product);
-          if (product) {
-            product.stock += item.qty; 
-            await product.save();
-          }
+        if (newStatus === 'Đã hủy' || newStatus === 'Trả hàng') {
+             if (order.status !== 'Đã hủy' && order.status !== 'Trả hàng') {
+                for (const item of order.orderItems) {
+                    const product = await Product.findById(item.product);
+                    if (product) {
+                        product.stock = (product.stock || 0) + item.qty;
+                        await product.save();
+                    }
+                }
+            }
         }
-      }
-    }
-
-    order.status = newStatus;
-    const updatedOrder = await order.save();
-    
-    res.json({ message: `Đã cập nhật trạng thái: ${newStatus}`, order: updatedOrder });
-
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
-  }
+        order.status = newStatus;
+        if (newStatus === 'Hoàn thành') {
+            order.isDelivered = true;
+            order.deliveredAt = Date.now();
+            order.isPaid = true;
+            order.paidAt = Date.now();
+        }
+        await order.save();
+        res.json({ message: "Cập nhật thành công", order });
+    } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
 exports.updateOrderToPaid = async (req, res) => {
-  try {
-    const order = await Order.findById(req.params.id);
-
-    if (order) {
-      order.isPaid = true;
-      order.paidAt = Date.now();
-      
-      order.paymentResult = {
-        id: req.body.id || 'MOCK_PAYMENT_ID_' + Date.now(), 
-        status: req.body.status || 'COMPLETED',
-        update_time: String(new Date()),
-        email_address: req.body.email_address || req.user.email,
-      };
-
-      const updatedOrder = await order.save();
-
-      res.json({
-        message: "Thanh toán giả lập thành công!",
-        order: updatedOrder
-      });
-    } else {
-      res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-    }
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
-  }
+    try {
+        const order = await Order.findById(req.params.id);
+        if (order) {
+            order.isPaid = true;
+            order.paidAt = Date.now();
+            order.paymentResult = {
+                id: req.body.id,
+                status: 'COMPLETED',
+                update_time: String(new Date()),
+                email_address: req.body.email_address
+            };
+            const updatedOrder = await order.save();
+            res.json(updatedOrder);
+        } else {
+            res.status(404).json({ message: "Order not found" });
+        }
+    } catch (error) { res.status(500).json({ message: error.message }); }
 };
+
+exports.getMyOrders = async (req, res) => {
+    try {
+        const orders = await Order.find({ user: req.user._id || req.user.id }).sort({ createdAt: -1 });
+        res.status(200).json(orders);
+    } catch (error) { res.status(500).json({ message: error.message }); }
+};
+

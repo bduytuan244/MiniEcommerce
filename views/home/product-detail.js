@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const footRes = await fetch('../layouts/footer.html');
             if(footRes.ok) footerContainer.innerHTML = await footRes.text();
             
-            checkLoginState();
+            checkLoginState(); 
         } catch (err) { console.error(err); }
     }
 
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadProductDetail() {
         if (!productId) {
-            detailContainer.innerHTML = '<p>Không tìm thấy sản phẩm!</p>';
+            detailContainer.innerHTML = '<p style="text-align:center">Không tìm thấy sản phẩm!</p>';
             return;
         }
 
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const product = await res.json();
 
             if (!res.ok) {
-                detailContainer.innerHTML = `<p>${product.message || 'Lỗi tải sản phẩm'}</p>`;
+                detailContainer.innerHTML = `<p style="text-align:center">${product.message || 'Lỗi tải sản phẩm'}</p>`;
                 return;
             }
 
@@ -43,19 +43,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="right-column">
                     <h1>${product.name}</h1>
-                    <p>Thương hiệu: <strong>${product.brand}</strong> | Danh mục: <strong>${product.category}</strong></p>
+                    <p style="color:#666;">Thương hiệu: <strong>${product.brand || 'Khác'}</strong> | Danh mục: <strong>${product.category || 'Chung'}</strong></p>
                     
-                    <div class="product-price">${product.price.toLocaleString('vi-VN')} đ</div>
+                    <div class="product-price">${Number(product.price).toLocaleString('vi-VN')} đ</div>
                     
+
                     <p class="stock-status">Tồn kho: ${product.stock} sản phẩm</p>
                     
-                    <p>${product.description}</p>
+                    <p style="margin: 20px 0; line-height: 1.6;">${product.description || 'Chưa có mô tả'}</p>
                     
                     <button class="btn-buy" onclick="addToCart('${product._id}')">
-                        🛒 Thêm vào giỏ hàng
+                        Thêm vào giỏ hàng
                     </button>
                     
-                    <a href="index.html" style="margin-top:10px; text-decoration:none; color:#007bff">
+                    <a href="index.html" style="display:block; margin-top:20px; text-decoration:none; color:#007bff">
                         ← Quay lại trang chủ
                     </a>
                 </div>
@@ -63,12 +64,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error(error);
-            detailContainer.innerHTML = '<p>Lỗi kết nối Server!</p>';
+            detailContainer.innerHTML = '<p style="text-align:center">Lỗi kết nối Server!</p>';
         }
     }
 
     loadLayout();
     loadProductDetail();
+
+    if (productId) {
+        loadReviews(productId);
+        
+        const reviewForm = document.getElementById('form-review');
+        if(reviewForm) {
+            reviewForm.addEventListener('submit', (e) => submitReview(e, productId));
+        }
+    }
 });
 
 function addToCart(productId) {
@@ -81,15 +91,91 @@ function addToCart(productId) {
         cart.push({ productId: productId, qty: 1 });
     }
     localStorage.setItem('cart', JSON.stringify(cart));
-    alert('✅ Đã thêm vào giỏ hàng!');
+    alert('Đã thêm vào giỏ hàng!');
 }
 
 function checkLoginState() {
     const user = localStorage.getItem('user');
-    const loginLink = document.querySelector('nav a[href="login.html"]');
+    const loginLink = document.querySelector('nav a[href*="login"]'); 
+    
     if (user && loginLink) {
         const userData = JSON.parse(user);
-        loginLink.textContent = `Hi, ${userData.name}`;
-        loginLink.href = "#";
+        loginLink.innerHTML = `👤 ${userData.name}`;
+        loginLink.href = "../profile/profile.html"; 
+        loginLink.style.color = "#ffc107";
+    }
+}
+
+async function loadReviews(productId) {
+    const list = document.getElementById('review-list');
+    if (!list) return;
+
+    try {
+        const res = await fetch(`http://localhost:5000/api/reviews/${productId}`);
+        const reviews = await res.json();
+
+        if (reviews.length === 0) {
+            list.innerHTML = '<p style="font-style:italic; color:#777;">Chưa có đánh giá nào. Hãy là người đầu tiên!</p>';
+            return;
+        }
+
+        list.innerHTML = reviews.map(r => `
+            <div style="margin-bottom: 15px; padding: 15px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #ffc107;">
+                <div style="display:flex; justify-content:space-between;">
+                    <strong>${r.name}</strong>
+                    <span style="font-size: 0.85em; color: #888;">${new Date(r.createdAt).toLocaleDateString('vi-VN')}</span>
+                </div>
+                <div style="color: #ffc107; margin: 5px 0;">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+                <p style="margin: 0;">${r.comment}</p>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error("Lỗi load review:", error);
+    }
+}
+
+async function submitReview(e, productId) {
+    e.preventDefault();
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+        if(confirm("Bạn cần đăng nhập để viết đánh giá. Đi tới trang đăng nhập?")) {
+            window.location.href = '../auth/login.html';
+        }
+        return;
+    }
+
+    const rating = document.getElementById('rating').value;
+    const comment = document.getElementById('comment').value;
+    const btnSubmit = e.target.querySelector('button');
+
+    btnSubmit.disabled = true;
+    btnSubmit.innerText = "Đang gửi...";
+
+    try {
+        const res = await fetch(`http://localhost:5000/api/reviews`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ rating, comment, productId }) 
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            alert("Đánh giá thành công!");
+            document.getElementById('comment').value = ''; 
+            loadReviews(productId); 
+        } else {
+            alert("Lỗi: " + (data.message || "Không thể gửi đánh giá"));
+        }
+    } catch (error) {
+        alert("Lỗi kết nối Server");
+    } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.innerText = "Gửi đánh giá";
     }
 }

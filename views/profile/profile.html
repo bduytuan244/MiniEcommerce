@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hồ sơ & Đơn hàng</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <style>
+        .profile-container { max-width: 1000px; margin: 30px auto; padding: 20px; display: flex; gap: 30px; }
+        .user-info { flex: 1; background: white; padding: 20px; border-radius: 8px; height: fit-content; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .order-history { flex: 3; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background-color: #f8f9fa; }
+        
+        .badge { padding: 5px 10px; border-radius: 15px; font-size: 0.85em; color: white; }
+        .badge-pending { background-color: #ffc107; color: #333; }
+        .badge-shipping { background-color: #17a2b8; }
+        .badge-delivered { background-color: #28a745; }
+        .badge-cancelled { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div id="header"></div>
+
+    <div class="profile-container">
+        <div class="user-info">
+            <h3>👤 Thông tin cá nhân</h3>
+            <p><strong>Tên:</strong> <span id="user-name">Loading...</span></p>
+            <p><strong>Email:</strong> <span id="user-email">Loading...</span></p>
+            <button onclick="logout()" style="width:100%; padding:8px; margin-top:10px; background:#6c757d; color:white; border:none; border-radius:4px; cursor:pointer;">Đăng xuất</button>
+        </div>
+
+        <div class="order-history">
+            <h3>📦 Lịch sử đơn hàng</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mã đơn</th>
+                        <th>Ngày đặt</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Chi tiết</th>
+                    </tr>
+                </thead>
+                <tbody id="order-list">
+                    <tr><td colspan="5" style="text-align:center">Đang tải...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="footer"></div>
+
+    <script src="../utils.js"></script>
+    <script src="profile.js"></script>
+</body>
+</html>

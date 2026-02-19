@@ -23,7 +23,7 @@
 
     <div class="checkout-container">
         <div class="checkout-form">
-            <h2>📍 Thông tin giao hàng</h2>
+            <h2>Thông tin giao hàng</h2>
             <form id="order-form">
                 <div class="form-group">
                     <label>Họ và tên người nhận</label>
@@ -48,9 +48,17 @@
         </div>
 
         <div class="checkout-summary">
-            <h2>🛒 Tóm tắt đơn hàng</h2>
+            <h2>Tóm tắt đơn hàng</h2>
             <div id="order-items-summary">
+        </div>
+            <div class="coupon-section" style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 5px;">
+                <p style="font-weight: bold; margin-bottom: 5px;">Mã giảm giá</p>
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="coupon-code" placeholder="Nhập mã (VD: SALE10)" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <button type="button" onclick="applyCoupon()" style="padding: 8px 15px; background: #333; color: white; border: none; border-radius: 4px; cursor: pointer;">Áp dụng</button>
                 </div>
+                <p id="coupon-message" style="margin-top: 5px; font-size: 0.9em;"></p>
+             </div>
             <div style="margin-top: 20px; font-size: 1.2em; font-weight: bold; display: flex; justify-content: space-between; color: #d32f2f;">
                 <span>Tổng cộng:</span>
                 <span id="final-total">0 đ</span>
