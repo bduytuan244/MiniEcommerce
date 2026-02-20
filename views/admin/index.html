@@ -32,11 +32,11 @@
     <div class="sidebar">
         <h2>MINI ADMIN</h2>
         <ul class="menu">
-            <li><a href="index.html">Tổng quan (Dashboard)</a></li>
-            <li><a href="products.html" class="active">Quản lý Sản phẩm</a></li> 
+            <li><a href="index.html" class="active">Tổng quan (Dashboard)</a></li>
+            <li><a href="products.html">Quản lý Sản phẩm</a></li> 
             <li><a href="orders.html">Quản lý Đơn hàng</a></li>
             <li><a href="users.html">Quản lý Người dùng</a></li>
-            <li><a href="coupons.html" class="active">Quản lý Mã giảm giá</a></li> </ul>
+            <li><a href="coupons.html">Quản lý Mã giảm giá</a></li>
         </ul>
         <div class="logout-btn" onclick="adminLogout()">Đăng xuất</div>
     </div>
@@ -51,21 +51,21 @@
             <h2 style="margin-top: 0;">Báo cáo tổng quan</h2>
             
             <div class="stat-cards">
-                <div class="card">
+                <div class="card revenue">
                     <h3>Tổng Doanh Thu</h3>
-                    <p class="revenue">150.000.000 đ</p>
+                    <p id="total-revenue">Đang tải...</p> 
                 </div>
                 <div class="card">
                     <h3>Tổng Đơn Hàng</h3>
-                    <p>320</p>
+                    <p id="total-orders">...</p>
                 </div>
                 <div class="card">
                     <h3>Sản Phẩm</h3>
-                    <p>45</p>
+                    <p id="total-products">...</p>
                 </div>
                 <div class="card">
                     <h3>Khách Hàng</h3>
-                    <p>120</p>
+                    <p id="total-users">...</p>
                 </div>
             </div>
 
@@ -78,8 +78,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const adminToken = localStorage.getItem('adminToken');
-            const adminUserStr = localStorage.getItem('adminUser');
+            const adminToken = localStorage.getItem('adminToken') || localStorage.getItem('token');
+            const adminUserStr = localStorage.getItem('adminUser') || localStorage.getItem('user');
 
             if (!adminToken || !adminUserStr) {
                 alert("Vui lòng đăng nhập quyền Admin!");
@@ -88,14 +88,43 @@
             }
 
             const adminUser = JSON.parse(adminUserStr);
-            document.getElementById('admin-name').innerText = adminUser.name;
+            document.getElementById('admin-name').innerText = adminUser.name || 'Admin';
             
+            // 👇 Gọi hàm tải dữ liệu thống kê
+            loadDashboardStats(adminToken);
         });
+
+        // Hàm gọi API lấy dữ liệu báo cáo
+        async function loadDashboardStats(token) {
+            try {
+                const res = await fetch('http://localhost:5000/api/dashboard/stats', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!res.ok) throw new Error('Lỗi khi tải dữ liệu');
+                
+                const data = await res.json();
+                
+                // Điền dữ liệu thật vào các thẻ đã đánh ID
+                document.getElementById('total-revenue').innerText = Number(data.totalRevenue || 0).toLocaleString('vi-VN') + ' đ';
+                document.getElementById('total-orders').innerText = data.totalOrders || 0;
+                document.getElementById('total-products').innerText = data.totalProducts || 0;
+                document.getElementById('total-users').innerText = data.totalUsers || 0;
+
+            } catch (error) {
+                console.error("Lỗi:", error);
+                document.getElementById('total-revenue').innerText = 'Lỗi!';
+                document.getElementById('total-orders').innerText = '-';
+                document.getElementById('total-products').innerText = '-';
+                document.getElementById('total-users').innerText = '-';
+            }
+        }
 
         function adminLogout() {
             if(confirm("Bạn muốn thoát tài khoản quản trị?")) {
                 localStorage.removeItem('adminToken');
                 localStorage.removeItem('adminUser');
+                localStorage.removeItem('token'); // Đề phòng lưu token chung
                 window.location.href = 'login.html';
             }
         }

@@ -1,3 +1,8 @@
+// Biến lưu trữ tiền bạc
+let originalTotal = 0;   // Tổng tiền gốc ban đầu
+let finalTotalToPay = 0; // Tổng tiền sau khi áp mã giảm (Sẽ gửi lên Server)
+let currentDiscount = 0; // % giảm giá
+
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -6,10 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return; 
     }
 
-    // Load Header & Footer
+    // 1. Load Header & Footer
     fetch('../layouts/header.html').then(res => res.text()).then(html => {
         document.getElementById('header').innerHTML = html;
-        checkLoginState(); 
+        if(typeof checkLoginState === 'function') checkLoginState(); 
     });
     fetch('../layouts/footer.html').then(res => res.text()).then(html => {
         document.getElementById('footer').innerHTML = html;
@@ -23,24 +28,33 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    // 3. Điền thông tin User
     const userStr = localStorage.getItem('user');
     if(userStr) {
         const userData = JSON.parse(userStr);
         document.getElementById('shippingName').value = userData.name || '';
     }
 
-    const totalAmount = localStorage.getItem('cartTotal') || 0;
-    document.getElementById('final-total').innerText = formatMoney(totalAmount); 
+    // 4. Tính toán tiền ban đầu
+    originalTotal = Number(localStorage.getItem('cartTotal') || 0);
+    finalTotalToPay = originalTotal; // Chưa nhập mã thì Tiền gốc = Tiền phải trả
     
-    // Hiển thị số lượng món hàng tóm tắt
+    // Hiển thị tổng cộng (dùng hàm formatMoney từ utils.js)
+    document.getElementById('final-total').innerText = formatMoney(finalTotalToPay); 
+    
+    // Hiển thị Tóm tắt số lượng món hàng
     document.getElementById('order-items-summary').innerHTML = `
         <div class="summary-item">
             <span>Số lượng sản phẩm:</span>
             <span>${cart.length} món</span>
         </div>
+        <div class="summary-item" style="border:none; padding-bottom: 0;">
+            <span>Tạm tính:</span>
+            <span>${formatMoney(originalTotal)}</span>
+        </div>
     `;
 
-    // 3. Xử lý nút Đặt Hàng
+    // 5. Xử lý nút Đặt Hàng
     document.getElementById('order-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btnSubmit = document.getElementById('btn-place-order');
@@ -54,87 +68,90 @@ document.addEventListener('DOMContentLoaded', () => {
                 phone: document.getElementById('shippingPhone').value
             },
             paymentMethod: document.getElementById('paymentMethod').value,
-            totalPrice: Number(totalAmount) 
+            // 👇 Gửi số tiền cuối cùng (đã trừ mã giảm giá nếu có) lên Server
+            totalPrice: finalTotalToPay 
         };
 
         try {
             const res = await fetch('http://localhost:5000/api/orders', {
                 method: 'POST',
-                headers: getAuthHeaders(), 
+                headers: typeof getAuthHeaders === 'function' ? getAuthHeaders() : {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }, 
                 body: JSON.stringify(orderData)
             });
 
             const data = await res.json();
 
             if (res.ok) {
-                alert('Đặt hàng thành công!');
+                alert('🎉 Đặt hàng thành công!');
                 localStorage.removeItem('cart');
                 localStorage.removeItem('cartTotal');
-                window.location.href = '../home/index.html';
+                window.location.href = '../profile/profile.html'; // Chuyển về trang Lịch sử đơn hàng
             } else {
-                alert('Lỗi đặt hàng: ' + data.message);
+                alert('❌ Lỗi đặt hàng: ' + data.message);
                 btnSubmit.innerText = 'Xác nhận Đặt hàng';
                 btnSubmit.disabled = false;
             }
         } catch (error) {
             console.error(error);
-            alert('Lỗi kết nối tới Server!');
+            alert('❌ Lỗi kết nối tới Server!');
             btnSubmit.innerText = 'Xác nhận Đặt hàng';
             btnSubmit.disabled = false;
         }
     });
-    originalTotal = Number(localStorage.getItem('cartTotal') || 0);
-    document.getElementById('final-total').innerText = formatMoney(originalTotal);
 });
 
+// 6. Hàm xử lý Mã giảm giá (Nằm ngoài DOMContentLoaded để HTML gọi được)
 async function applyCoupon() {
-    const code = document.getElementById('coupon-code').value.trim();
-    const msgEl = document.getElementById('coupon-message');
-    
-    if (!code) {
-        msgEl.style.color = 'red';
-        msgEl.innerText = "Vui lòng nhập mã!";
+    // Đã sửa lại đúng ID 'coupon-code' và 'coupon-message' của HTML
+    const codeInput = document.getElementById('coupon-code').value.trim(); 
+    const messageEl = document.getElementById('coupon-message'); 
+
+    if (!codeInput) {
+        messageEl.innerHTML = '<span style="color:red;">❌ Vui lòng nhập mã!</span>';
         return;
     }
 
+    messageEl.innerHTML = '<span style="color:blue;">⏳ Đang kiểm tra...</span>';
+
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:5000/api/coupons/check', {
+        
+        const res = await fetch('http://localhost:5000/api/coupons/apply', {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ code })
+            body: JSON.stringify({ code: codeInput })
         });
 
         const data = await res.json();
 
         if (res.ok) {
-            currentDiscount = data.discount; 
+            // Áp dụng thành công -> Lưu % giảm giá
+            currentDiscount = data.discount;
             
+            // Tính số tiền được giảm và tiền phải trả
             const discountAmount = originalTotal * (currentDiscount / 100);
-            const newTotal = originalTotal - discountAmount;
-            
-            msgEl.style.color = 'green';
-            msgEl.innerText = `${data.message}`;
-            
-            document.getElementById('final-total').innerHTML = `
-                <span style="text-decoration: line-through; color: #999; font-size: 0.8em;">${formatMoney(originalTotal)}</span>
-                <br>
-                <span>${formatMoney(newTotal)}</span>
-            `;
-            
-            document.getElementById('coupon-code').disabled = true;
-            
+            finalTotalToPay = originalTotal - discountAmount;
+
+            // In thông báo màu xanh và đổi số tổng tiền ở dưới cùng
+            messageEl.innerHTML = `<span style="color:green; font-weight:bold;">✅ ${data.message} (Giảm ${currentDiscount}%)</span>`;
+            document.getElementById('final-total').innerText = formatMoney(finalTotalToPay);
+
         } else {
-            currentDiscount = 0; 
-            msgEl.style.color = 'red';
-            msgEl.innerText = `${data.message}`;
-            document.getElementById('final-total').innerText = formatMoney(originalTotal);
+            // Mã sai hoặc hết hạn -> Reset lại như cũ
+            messageEl.innerHTML = `<span style="color:red;">❌ ${data.message}</span>`;
+            currentDiscount = 0;
+            finalTotalToPay = originalTotal;
+            document.getElementById('final-total').innerText = formatMoney(finalTotalToPay);
         }
+
     } catch (error) {
         console.error(error);
-        msgEl.innerText = "Lỗi kết nối Server";
+        messageEl.innerHTML = '<span style="color:red;">❌ Lỗi kết nối Server</span>';
     }
 }
