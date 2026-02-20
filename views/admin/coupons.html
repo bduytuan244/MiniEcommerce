@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Mã giảm giá - Admin</title>
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; display: flex; height: 100vh; background: #f4f6f9; }
+        .sidebar { width: 250px; background: #343a40; color: white; display: flex; flex-direction: column; }
+        .sidebar h2 { text-align: center; padding: 20px 0; margin: 0; background: #23272b; border-bottom: 1px solid #4f5962; }
+        .menu { list-style: none; padding: 0; margin: 0; flex: 1; }
+        .menu li { border-bottom: 1px solid #4f5962; }
+        .menu a { display: block; padding: 15px 20px; color: #c2c7d0; text-decoration: none; transition: 0.3s; }
+        .menu a:hover, .menu a.active { background: #007bff; color: white; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .content { padding: 30px; overflow-y: auto; flex: 1; }
+        .sidebar .logout-btn { padding: 15px; background: #dc3545; color: white; text-align: center; cursor: pointer; }
+
+        .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        
+        .form-group { display: flex; gap: 15px; margin-bottom: 15px; align-items: flex-end; }
+        .form-group > div { flex: 1; display: flex; flex-direction: column; }
+        label { margin-bottom: 5px; font-weight: bold; color: #333; }
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
+        .btn-add { background: #28a745; height: 38px; }
+        .btn-add:hover { background: #218838; }
+        .btn-delete { background: #dc3545; padding: 6px 12px; }
+        .btn-delete:hover { background: #c82333; }
+
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #17a2b8; color: white; }
+        tr:hover { background: #f1f1f1; }
+
+        .badge { padding: 5px 10px; border-radius: 4px; color: white; font-size: 0.8em; font-weight: bold; }
+        .bg-active { background: #28a745; }
+        .bg-expired { background: #6c757d; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>MINI ADMIN</h2>
+        <ul class="menu">
+            <li><a href="index.html">Tổng quan</a></li>
+            <li><a href="products.html">Quản lý Sản phẩm</a></li>
+            <li><a href="orders.html">Quản lý Đơn hàng</a></li>
+            <li><a href="users.html">Quản lý Người dùng</a></li>
+            <li><a href="coupons.html" class="active">Quản lý Mã giảm giá</a></li> </ul>
+        <div class="logout-btn" onclick="logout()"> Đăng xuất</div>
+    </div>
+
+    <div class="main-content">
+        <div class="content">
+            <h2 style="margin-top: 0;">Quản lý Mã giảm giá (Voucher)</h2>
+            
+            <div class="card">
+                <h3 style="margin-top: 0; color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px;">Thêm Mã Mới</h3>
+                <form id="couponForm" onsubmit="createCoupon(event)">
+                    <div class="form-group">
+                        <div>
+                            <label>Mã giảm giá (VD: TET2026)</label>
+                            <input type="text" id="code" required style="text-transform: uppercase;" placeholder="Nhập chữ liền không dấu">
+                        </div>
+                        <div>
+                            <label>Phần trăm giảm (%)</label>
+                            <input type="number" id="discount" required min="1" max="100" placeholder="VD: 15">
+                        </div>
+                        <div>
+                            <label>Ngày hết hạn</label>
+                            <input type="date" id="expirationDate" required>
+                        </div>
+                        <button type="submit" class="btn-add">➕ Thêm mã</button>
+                    </div>
+                </form>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mã Voucher</th>
+                        <th>Giảm giá</th>
+                        <th>Ngày hết hạn</th>
+                        <th>Trạng thái</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="coupon-table-body">
+                    <tr><td colspan="5" style="text-align:center;">⏳ Đang tải...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+        if (!token) window.location.href = 'login.html';
+
+        async function loadCoupons() {
+            try {
+                const res = await fetch('http://localhost:5000/api/coupons', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.message || 'Lỗi tải dữ liệu');
+
+                const tbody = document.getElementById('coupon-table-body');
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Chưa có mã giảm giá nào</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.map(coupon => {
+                    const expDate = new Date(coupon.expirationDate);
+                    const isExpired = expDate < new Date(); 
+
+                    const statusBadge = isExpired 
+                        ? '<span class="badge bg-expired">Hết hạn</span>' 
+                        : '<span class="badge bg-active">Còn hạn</span>';
+
+                    return `
+                        <tr>
+                            <td style="font-weight:bold; color:#17a2b8; font-size: 1.1em;">${coupon.code}</td>
+                            <td style="font-weight:bold; color:#d32f2f;">Giảm ${coupon.discount}%</td>
+                            <td>${expDate.toLocaleDateString('vi-VN')}</td>
+                            <td>${statusBadge}</td>
+                            <td>
+                                <button class="btn-delete" onclick="deleteCoupon('${coupon._id}')">🗑️ Xóa</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                alert(' Lỗi: ' + error.message);
+            }
+        }
+
+        async function createCoupon(e) {
+            e.preventDefault();
+            
+            const btn = document.querySelector('.btn-add');
+            btn.disabled = true;
+            btn.innerText = "Đang thêm...";
+
+            const newCoupon = {
+                code: document.getElementById('code').value,
+                discount: document.getElementById('discount').value,
+                expirationDate: document.getElementById('expirationDate').value
+            };
+
+            try {
+                const res = await fetch('http://localhost:5000/api/coupons', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify(newCoupon)
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    alert("Thêm mã giảm giá thành công!");
+                    document.getElementById('couponForm').reset(); 
+                    loadCoupons(); 
+                } else {
+                    alert("Lỗi: " + data.message);
+                }
+            } catch (error) {
+                alert("Lỗi kết nối Server");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "➕ Thêm mã";
+            }
+        }
+
+        async function deleteCoupon(id) {
+            if (!confirm("Bạn có chắc chắn muốn xóa mã giảm giá này? Khách hàng sẽ không thể nhập mã này nữa.")) return;
+
+            try {
+                const res = await fetch(`http://localhost:5000/api/coupons/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (res.ok) {
+                    loadCoupons(); 
+                } else {
+                    const data = await res.json();
+                    alert(" Lỗi: " + data.message);
+                }
+            } catch (error) {
+                alert("Lỗi kết nối Server");
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+        }
+
+        loadCoupons();
+    </script>
+</body>
+</html>
