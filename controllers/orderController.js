@@ -1,17 +1,11 @@
 const Order = require('../models/Order');
-const Product = require('../models/Products'); 
-const User = require('../models/User');
+const Product = require('../models/Products');
+const User = require('../models/User'); 
 const sendEmail = require('../utils/sendEmail');
 
 exports.createOrder = async (req, res) => {
   try {
-    const {
-      orderItems,
-      shippingInfo,
-      paymentMethod,
-    } = req.body;
-
-    console.log("Dữ liệu nhận:", req.body);
+    const { orderItems, shippingInfo, paymentMethod } = req.body;
 
     if (!orderItems || orderItems.length === 0) {
       return res.status(400).json({ message: "Giỏ hàng rỗng" });
@@ -48,11 +42,8 @@ exports.createOrder = async (req, res) => {
       orderItems: orderItemsProcessed,
       user: req.user._id || req.user.id,
       customerName: req.user.name || shippingInfo.fullName || "Khách hàng",
-      
       address: shippingInfo.address,
       phone: shippingInfo.phone,
-      shippingAddress: shippingInfo,
-
       paymentMethod,
       itemsPrice: calculatedTotalPrice,
       shippingPrice: 0,
@@ -62,7 +53,6 @@ exports.createOrder = async (req, res) => {
     });
 
     const createdOrder = await order.save();
-    console.log("Tạo đơn thành công:", createdOrder._id);
 
     try {
         const userDetail = await User.findById(req.user._id || req.user.id);
@@ -71,23 +61,18 @@ exports.createOrder = async (req, res) => {
 
         if (emailToSend && typeof sendEmail === 'function') {
             await sendEmail({
-                email: emailToSend, 
+                email: emailToSend,
                 subject: `Xác nhận đơn hàng #${createdOrder._id}`,
                 message: `Xin chào ${nameToSend},\nCảm ơn bạn đã đặt hàng. Tổng tiền: ${calculatedTotalPrice.toLocaleString()}đ`
             });
-            console.log(`Đã gửi email tới: ${emailToSend}`);
-        } else {
-            console.log("Không tìm thấy Email người dùng, bỏ qua gửi mail.");
         }
     } catch (err) {
-        console.error("Lỗi gửi mail (đơn vẫn tạo thành công):", err.message);
+        console.error("Lỗi gửi mail:", err.message);
     }
 
     res.status(201).json(createdOrder);
-
   } catch (error) {
-    console.error("LỖI TẠO ĐƠN:", error);
-    res.status(500).json({ message: "Lỗi: " + error.message });
+    res.status(500).json({ message: "Lỗi tạo đơn: " + error.message });
   }
 };
 
@@ -163,3 +148,15 @@ exports.getMyOrders = async (req, res) => {
     } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
+exports.getOrderById = async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id).populate('user', 'name email');
+        if (order) {
+            res.json(order);
+        } else {
+            res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server: ' + error.message });
+    }
+};
