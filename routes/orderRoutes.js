@@ -7,8 +7,7 @@ router.get('/myorders', verifyToken, orderController.getMyOrders);
 
 router.post('/', verifyToken, orderController.createOrder);
 
-// router.get('/my-orders', verifyToken, orderController.getMyOrders);
-
+router.get('/:id', verifyToken, orderController.getOrderById);
 router.get('/', verifyToken, verifyAdmin, orderController.getOrders);
 
 router.put('/:id/status', verifyToken, verifyAdmin, orderController.updateOrderStatus);

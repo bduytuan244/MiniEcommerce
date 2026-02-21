@@ -8,5 +8,6 @@ router.get('/', verifyToken, verifyAdmin, userController.getUsers);
 router.put('/:id', verifyToken, verifyAdmin, userController.updateUser);
 
 router.delete('/:id', verifyToken, verifyAdmin, userController.deleteUser);
-
+router.delete('/:id', verifyToken, verifyAdmin, userController.deleteUser);
+router.put('/:id/lock', verifyToken, verifyAdmin, userController.toggleLockUser);
 module.exports = router;

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết đơn hàng</title>
+    <link rel="stylesheet" href="../../css/style.css"> 
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f6f9; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+        .back-btn { text-decoration: none; color: #555; font-weight: bold; display: flex; align-items: center; gap: 5px; }
+        .back-btn:hover { color: #000; }
+        
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
+        .info-box h4 { margin-top: 0; color: #555; }
+        .info-box p { margin: 5px 0; color: #333; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; }
+        .total-row td { font-weight: bold; font-size: 1.2em; color: #d32f2f; }
+        
+        .badge { padding: 5px 10px; border-radius: 4px; color: white; font-size: 0.9em; font-weight: bold; }
+        .status-pending { background: #ffc107; color: #333; }
+        .status-shipping { background: #17a2b8; }
+        .status-completed { background: #28a745; }
+        .status-cancelled { background: #dc3545; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <a href="profile.html" class="back-btn">Quay lại danh sách</a>
+            <h2 style="margin:0">Đơn hàng <span id="orderId">...</span></h2>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-box">
+                <h4>Địa chỉ nhận hàng</h4>
+                <p id="shippingName">Loading...</p>
+                <p id="shippingAddress">Loading...</p>
+                <p id="shippingPhone">Loading...</p>
+            </div>
+            <div class="info-box">
+                <h4>Thông tin thanh toán</h4>
+                <p>Phương thức: <strong id="paymentMethod">...</strong></p>
+                <p>Trạng thái: <span id="payStatus">...</span></p>
+                <p>Ngày đặt: <span id="orderDate">...</span></p>
+            </div>
+        </div>
+
+        <h3 style="border-top: 1px solid #eee; padding-top: 20px;">📦 Sản phẩm đã mua</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Sản phẩm</th>
+                    <th>Đơn giá</th>
+                    <th>Số lượng</th>
+                    <th>Tạm tính</th>
+                </tr>
+            </thead>
+            <tbody id="orderItems">
+                </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td colspan="3" style="text-align: right;">Tổng cộng:</td>
+                    <td id="totalPrice">...</td>
+                </tr>
+            </tfoot>
+        </table>
+        
+        <div style="margin-top: 30px; text-align: right;">
+            Trạng thái đơn hàng: <span id="orderStatus" class="badge">...</span>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('id');
+        const token = localStorage.getItem('token');
+
+        if (!token) window.location.href = '../login.html';
+        if (!orderId) { alert("Không tìm thấy mã đơn hàng"); window.location.href = 'profile.html'; }
+
+        async function fetchOrderDetail() {
+            try {
+                const res = await fetch(`http://localhost:5000/api/orders/${orderId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const order = await res.json();
+
+                if (!res.ok) throw new Error(order.message);
+
+                document.getElementById('orderId').innerText = '#' + order._id.slice(-6).toUpperCase();
+                document.getElementById('orderDate').innerText = new Date(order.createdAt).toLocaleString('vi-VN');
+                
+                document.getElementById('shippingName').innerText = order.customerName || order.user.name;
+                document.getElementById('shippingAddress').innerText = order.address || (order.shippingAddress ? order.shippingAddress.address : 'N/A');
+                document.getElementById('shippingPhone').innerText = order.phone || (order.shippingAddress ? order.shippingAddress.phone : 'N/A');
+
+                document.getElementById('paymentMethod').innerText = order.paymentMethod;
+                const isPaid = order.isPaid;
+                document.getElementById('payStatus').innerHTML = isPaid 
+                    ? '<span style="color:green; font-weight:bold;">Đã thanh toán</span>' 
+                    : '<span style="color:red; font-weight:bold;">Chưa thanh toán</span>';
+
+                const statusEl = document.getElementById('orderStatus');
+                statusEl.innerText = order.status;
+                if (order.status === 'Hoàn thành') statusEl.className = 'badge status-completed';
+                else if (order.status === 'Đã hủy') statusEl.className = 'badge status-cancelled';
+                else if (order.status === 'Đang vận chuyển') statusEl.className = 'badge status-shipping';
+                else statusEl.className = 'badge status-pending';
+
+                const itemsHtml = order.orderItems.map(item => `
+                    <tr>
+                        <td style="display:flex; align-items:center; gap:10px;">
+                            <img src="${item.image}" width="50" style="border-radius:4px;">
+                            <span>${item.name}</span>
+                        </td>
+                        <td>${item.price.toLocaleString('vi-VN')}₫</td>
+                        <td>x${item.qty}</td>
+                        <td style="font-weight:bold;">${(item.price * item.qty).toLocaleString('vi-VN')}₫</td>
+                    </tr>
+                `).join('');
+                document.getElementById('orderItems').innerHTML = itemsHtml;
+
+                document.getElementById('totalPrice').innerText = order.totalPrice.toLocaleString('vi-VN') + '₫';
+
+            } catch (error) {
+                alert("Lỗi tải đơn hàng: " + error.message);
+            }
+        }
+
+        fetchOrderDetail();
+    </script>
+</body>
+</html>

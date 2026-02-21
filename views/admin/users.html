@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Người dùng - Admin</title>
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; display: flex; height: 100vh; background: #f4f6f9; }
+        .sidebar { width: 250px; background: #343a40; color: white; display: flex; flex-direction: column; }
+        .sidebar h2 { text-align: center; padding: 20px 0; margin: 0; background: #23272b; border-bottom: 1px solid #4f5962; }
+        .menu { list-style: none; padding: 0; margin: 0; flex: 1; }
+        .menu li { border-bottom: 1px solid #4f5962; }
+        .menu a { display: block; padding: 15px 20px; color: #c2c7d0; text-decoration: none; transition: 0.3s; }
+        .menu a:hover, .menu a.active { background: #007bff; color: white; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .content { padding: 30px; overflow-y: auto; flex: 1; }
+        .sidebar .logout-btn { padding: 15px; background: #dc3545; color: white; text-align: center; cursor: pointer; }
+
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; vertical-align: middle; }
+        th { background: #17a2b8; color: white; }
+        tr:hover { background: #f1f1f1; }
+
+        .badge { padding: 5px 10px; border-radius: 4px; color: white; font-size: 0.8em; font-weight: bold; }
+        .bg-admin { background: #17a2b8; } 
+        .bg-user { background: #28a745; }  
+        .bg-locked { background: #dc3545; }
+
+        .btn-action { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold; margin-right: 5px; }
+        .btn-lock { background: #ffc107; color: #333; }
+        .btn-unlock { background: #28a745; }
+        .btn-delete { background: #dc3545; }
+        .btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>MINI ADMIN</h2>
+        <ul class="menu">
+            <li><a href="index.html">Tổng quan</a></li>
+            <li><a href="products.html">Quản lý Sản phẩm</a></li>
+            <li><a href="orders.html">Quản lý Đơn hàng</a></li>
+            <li><a href="users.html" class="active">Quản lý Người dùng</a></li>
+            <li><a href="coupons.html" class="active">Quản lý Mã giảm giá</a></li>
+        </ul>
+        <div class="logout-btn" onclick="logout()"> Đăng xuất</div>
+    </div>
+
+    <div class="main-content">
+        <div class="content">
+            <h2 style="margin-top: 0;">Danh sách Người dùng</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tên</th>
+                        <th>Email</th>
+                        <th>Quyền (Role)</th>
+                        <th>Trạng thái</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="user-table-body">
+                    <tr><td colspan="5" style="text-align:center;">Đang tải...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+        if (!token) window.location.href = 'login.html';
+
+        async function loadUsers() {
+            try {
+                const res = await fetch('http://localhost:5000/api/users', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.message || 'Lỗi server');
+
+                const tbody = document.getElementById('user-table-body');
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Chưa có người dùng nào</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.map(user => {
+                    const roleBadge = user.isAdmin ? '<span class="badge bg-admin">Admin</span>' : '<span class="badge bg-user">Khách</span>';
+                    const statusBadge = user.isLocked ? '<span class="badge bg-locked">Đã Khóa</span>' : '<span style="color:green; font-weight:bold;">Hoạt động</span>';
+                    
+                    let actionButtons = '';
+                    if (!user.isAdmin) {
+                        const lockBtnClass = user.isLocked ? 'btn-unlock' : 'btn-lock';
+                        const lockBtnText = user.isLocked ? 'Mở Khóa' : 'Khóa';
+                        actionButtons = `
+                            <button onclick="toggleLock('${user._id}', this)" class="btn-action ${lockBtnClass}">${lockBtnText}</button>
+                            <button onclick="deleteUser('${user._id}')" class="btn-action btn-delete">Xóa</button>
+                        `;
+                    } else {
+                        actionButtons = '<span style="color:#666; font-size:0.9em;">(Bảo vệ)</span>';
+                    }
+
+                    return `
+                        <tr>
+                            <td style="font-weight:bold;">${user.name}</td>
+                            <td>${user.email}</td>
+                            <td>${roleBadge}</td>
+                            <td>${statusBadge}</td>
+                            <td>${actionButtons}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                alert(' Lỗi: ' + error.message);
+            }
+        }
+
+        async function deleteUser(id) {
+            if (!confirm("Chú ý: Dữ liệu bị xóa sẽ không thể khôi phục. Bạn chắc chắn chứ?")) return;
+
+            try {
+                const res = await fetch(`http://localhost:5000/api/users/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await res.json();
+                if (res.ok) {
+                    alert("Đã xóa thành công!");
+                    loadUsers(); 
+                } else {
+                    alert("Lỗi: " + data.message);
+                }
+            } catch (error) {
+                alert("Lỗi kết nối máy chủ");
+            }
+        }
+
+        async function toggleLock(id, btnElement) {
+            btnElement.disabled = true;
+            btnElement.innerText = "...";
+
+            try {
+                const res = await fetch(`http://localhost:5000/api/users/${id}/lock`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await res.json();
+                if (res.ok) {
+                    loadUsers(); 
+                } else {
+                    alert("Lỗi: " + data.message);
+                    btnElement.disabled = false;
+                }
+            } catch (error) {
+                alert("Lỗi kết nối máy chủ");
+                btnElement.disabled = false;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+        }
+
+        loadUsers();
+    </script>
+</body>
+</html>

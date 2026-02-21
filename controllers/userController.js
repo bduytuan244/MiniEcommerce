@@ -65,3 +65,49 @@ exports.updateUser = async (req, res) => {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
+
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({}).select('-password').sort({ createdAt: -1 });
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi lấy danh sách: " + error.message });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+        
+        if (user.isAdmin) {
+            return res.status(400).json({ message: "Không thể xóa tài khoản Quản trị viên!" });
+        }
+
+        await User.findByIdAndDelete(req.params.id);
+        res.json({ message: "Đã xóa tài khoản thành công" });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi server: " + error.message });
+    }
+};
+
+exports.toggleLockUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+
+        if (user.isAdmin) {
+            return res.status(400).json({ message: "Không thể khóa tài khoản Quản trị viên!" });
+        }
+
+        user.isLocked = !user.isLocked;
+        await user.save();
+
+        res.json({ 
+            message: user.isLocked ? "Đã khóa tài khoản!" : "Đã mở khóa tài khoản!", 
+            isLocked: user.isLocked 
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi server: " + error.message });
+    }
+};
