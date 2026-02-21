@@ -1,6 +1,5 @@
 const Joi = require('joi');
 
-// 1. Luật kiểm tra cho form Đăng ký
 const registerSchema = Joi.object({
     name: Joi.string().min(3).max(50).required().messages({
         'string.empty': 'Tên không được để trống',
@@ -19,7 +18,6 @@ const registerSchema = Joi.object({
     })
 });
 
-// 2. Luật kiểm tra cho form Đăng nhập
 const loginSchema = Joi.object({
     email: Joi.string().email().required().messages({
         'string.empty': 'Email không được để trống',

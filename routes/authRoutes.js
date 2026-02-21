@@ -9,7 +9,6 @@ const { registerSchema, loginSchema } = require('../validations/authValidation')
 
 router.post('/register', validate(registerSchema), authController.register);
 router.post('/login', validate(loginSchema), authController.login);
-// 1. Register (Có validation)
 router.post('/register', [
     check('name', 'Tên không được để trống').not().isEmpty(),
     check('email', 'Email không hợp lệ').isEmail(),
@@ -19,10 +18,8 @@ router.post('/register', [
   authController.register
 );
 
-// 2. Verify OTP (Đơn giản, không cần validation phức tạp)
 router.post('/verify-otp', authController.verifyAccount);
 
-// 3. Login
 router.post('/login', [
     check('email', 'Vui lòng nhập đúng định dạng email').isEmail(),
     check('password', 'Mật khẩu không được để trống').exists()

@@ -108,7 +108,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const productId = urlParams.get('id'); 
 
-        // 1. TẢI DỮ LIỆU SẢN PHẨM (Nếu đang ở chế độ Chỉnh sửa)
         if (productId) {
             document.getElementById('page-title').innerText = "Chỉnh Sửa Sản Phẩm";
             loadProductData(productId);
@@ -127,10 +126,8 @@
                     document.getElementById('category').value = product.category;
                     document.getElementById('description').value = product.description;
                     
-                    // Hiện ảnh cũ nếu có
                     if (product.images && product.images.length > 0) {
                         document.getElementById('imageUrl').value = product.images[0];
-                        // Nếu lưu dạng '/uploads/...', cần thêm http://localhost:5000 để xem trên web
                         const imgSrc = product.images[0].startsWith('http') ? product.images[0] : `http://localhost:5000${product.images[0]}`;
                         document.getElementById('imagePreview').src = imgSrc;
                         document.getElementById('imagePreview').style.display = 'block';
@@ -141,18 +138,16 @@
             }
         }
 
-        // 2. HÀM XEM TRƯỚC ẢNH SAU KHI CHỌN FILE
         function previewFile() {
             const file = document.getElementById('imageFile').files[0];
             const preview = document.getElementById('imagePreview');
             
             if (file) {
-                preview.src = URL.createObjectURL(file); // Hiển thị ảnh tạm thời từ máy tính
+                preview.src = URL.createObjectURL(file);
                 preview.style.display = 'block';
             }
         }
 
-        // 3. XỬ LÝ LƯU (UPLOAD FILE + GỬI DỮ LIỆU)
         document.getElementById('product-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -161,11 +156,9 @@
             btnSave.disabled = true;
 
             try {
-                // Biến lưu trữ đường dẫn ảnh cuối cùng
                 let finalImageUrl = document.getElementById('imageUrl').value;
                 const fileInput = document.getElementById('imageFile');
 
-                // BƯỚC A: NẾU CÓ CHỌN FILE MỚI -> UPLOAD ẢNH TRƯỚC
                 if (fileInput.files.length > 0) {
                     btnSave.innerText = "Đang tải ảnh lên...";
                     
@@ -175,7 +168,6 @@
                     const uploadRes = await fetch('http://localhost:5000/api/upload', {
                         method: 'POST',
                         headers: { 
-                            // LƯU Ý: Không dùng 'Content-Type': 'application/json' với FormData
                             'Authorization': `Bearer ${token}` 
                         },
                         body: formData
@@ -187,16 +179,13 @@
                         throw new Error(uploadData.message || "Lỗi khi tải ảnh lên server");
                     }
 
-                    // Lấy link ảnh do Server trả về (VD: /uploads/image-123.jpg)
                     finalImageUrl = uploadData.imageUrl; 
                 }
 
-                // Kiểm tra xem đã có ảnh chưa (bắt buộc)
                 if (!finalImageUrl) {
                     throw new Error("Vui lòng chọn ảnh cho sản phẩm!");
                 }
 
-                // BƯỚC B: GỬI DỮ LIỆU SẢN PHẨM LÊN API PRODUCTS
                 btnSave.innerText = "Đang lưu sản phẩm...";
 
                 const productData = {
@@ -206,7 +195,7 @@
                     brand: document.getElementById('brand').value,
                     category: document.getElementById('category').value,
                     description: document.getElementById('description').value,
-                    images: [finalImageUrl] // Gắn link ảnh mới (hoặc cũ) vào đây
+                    images: [finalImageUrl]
                 };
 
                 const url = productId ? `http://localhost:5000/api/products/${productId}` : 'http://localhost:5000/api/products';

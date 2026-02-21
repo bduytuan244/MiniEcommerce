@@ -1,6 +1,5 @@
 const Category = require('../models/Category');
 
-// crate
 exports.createCategory = async (req, res) => {
   try {
     const { name, description } = req.body;
@@ -19,7 +18,6 @@ exports.createCategory = async (req, res) => {
   }
 };
 
-// Get
 exports.getCategories = async (req, res) => {
   try {
     const categories = await Category.find();
@@ -29,7 +27,6 @@ exports.getCategories = async (req, res) => {
   }
 };
 
-// Update
 exports.updateCategory = async (req, res) => {
   try {
     const updatedCategory = await Category.findByIdAndUpdate(
@@ -48,7 +45,6 @@ exports.updateCategory = async (req, res) => {
   }
 };
 
-// Delete
 exports.deleteCategory = async (req, res) => {
   try {
     const deletedCategory = await Category.findByIdAndDelete(req.params.id);

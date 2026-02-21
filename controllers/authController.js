@@ -3,7 +3,6 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/sendEmail');
 
-// Hàm tạo Token (Access & Refresh)
 const generateTokens = (id) => {
   const accessToken = jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE,
@@ -14,23 +13,20 @@ const generateTokens = (id) => {
   return { accessToken, refreshToken };
 };
 
-// 1. ĐĂNG KÝ (REGISTER)
 exports.register = async (req, res) => { 
   try {
     const { name, email, password } = req.body;
 
-    // Kiểm tra xem email đã tồn tại chưa
     let user = await User.findOne({ email });
     if (user) {
         if (user.isVerified) {
             return res.status(400).json({ message: "Email này đã được sử dụng và kích hoạt." });
         }
-        // Nếu đã đăng ký nhưng chưa kích hoạt -> Gửi lại mã OTP mới
         await User.findByIdAndDelete(user._id); 
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpire = Date.now() + 10 * 60 * 1000; // 10 phút
+    const otpExpire = Date.now() + 10 * 60 * 1000; 
 
     user = await User.create({
       name, email, password, otp, otpExpire, isVerified: false
@@ -50,7 +46,7 @@ exports.register = async (req, res) => {
 
     } catch (emailError) {
       console.error("Lỗi gửi mail:", emailError);
-      await User.findByIdAndDelete(user._id); // Xóa user nếu gửi mail lỗi để họ đăng ký lại
+      await User.findByIdAndDelete(user._id); 
       return res.status(500).json({ message: "Lỗi gửi email OTP. Vui lòng thử lại sau." });
     }
 
@@ -60,12 +56,10 @@ exports.register = async (req, res) => {
   }
 };
 
-// 2. XÁC THỰC TÀI KHOẢN (VERIFY OTP)
 exports.verifyAccount = async (req, res) => { 
   try {
     const { email, otp } = req.body;
     
-    // Tìm user khớp email, khớp OTP và OTP chưa hết hạn
     const user = await User.findOne({
       email, 
       otp, 
@@ -100,11 +94,10 @@ exports.verifyAccount = async (req, res) => {
   }
 };
 
-// 3. ĐĂNG NHẬP (LOGIN)
 exports.login = async (req, res) => { 
   try {
     const { email, password } = req.body;
-    // Đã xóa dòng if(!email || !password) vì Joi Middleware đã lo việc này
+
 
     const user = await User.findOne({ email }).select('+password');
     
@@ -133,7 +126,6 @@ exports.login = async (req, res) => {
   }
 };
 
-// 4. LÀM MỚI TOKEN (REFRESH TOKEN)
 exports.refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
@@ -153,13 +145,12 @@ exports.refreshToken = async (req, res) => {
   }
 };
 
-// 5. ĐĂNG XUẤT (LOGOUT)
 exports.logout = async (req, res) => {
   try {
     if (req.user) {
         const user = await User.findById(req.user.id);
         if (user) {
-            user.refreshToken = null; // Xóa refresh token khỏi database
+            user.refreshToken = null; 
             await user.save({ validateBeforeSave: false });
         }
     }
@@ -169,7 +160,6 @@ exports.logout = async (req, res) => {
   }
 };
 
-// 6. QUÊN MẬT KHẨU (FORGOT PASSWORD)
 exports.forgotPassword = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
@@ -177,11 +167,10 @@ exports.forgotPassword = async (req, res) => {
 
     const resetToken = crypto.randomBytes(20).toString('hex');
     user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 phút
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; 
     
     await user.save({ validateBeforeSave: false });
 
-    // Tạo link reset mật khẩu (Dẫn về trang Frontend của bạn)
     const resetUrl = `http://localhost:5000/auth/reset-password.html?token=${resetToken}`;
     
     try {
@@ -202,7 +191,6 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// 7. ĐẶT LẠI MẬT KHẨU (RESET PASSWORD)
 exports.resetPassword = async (req, res) => {
   try {
     const resetPasswordToken = crypto.createHash('sha256').update(req.params.resetToken).digest('hex');
@@ -217,7 +205,7 @@ exports.resetPassword = async (req, res) => {
     user.password = req.body.password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
-    await user.save(); // Chạy qua middleware mã hóa password trong User model
+    await user.save(); 
 
     return res.status(200).json({ message: "Đổi mật khẩu thành công! Bạn có thể đăng nhập ngay." });
   } catch (error) {

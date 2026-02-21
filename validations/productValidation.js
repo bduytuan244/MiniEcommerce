@@ -1,6 +1,5 @@
 const Joi = require('joi');
 
-// 1. Luật kiểm tra khi THÊM MỚI sản phẩm
 const createProductSchema = Joi.object({
     name: Joi.string().required().messages({
         'string.empty': 'Tên sản phẩm không được để trống',
@@ -24,11 +23,10 @@ const createProductSchema = Joi.object({
         'string.empty': 'Danh mục không được để trống',
         'any.required': 'Vui lòng nhập danh mục'
     }),
-    description: Joi.string().allow('').optional(), // Cho phép để trống
-    images: Joi.array().items(Joi.string()).optional() // Là một mảng chứa các link ảnh
+    description: Joi.string().allow('').optional(), 
+    images: Joi.array().items(Joi.string()).optional() 
 });
 
-// 2. Luật kiểm tra khi CẬP NHẬT sản phẩm (Các trường không bắt buộc phải có, nhưng nếu có thì phải đúng luật)
 const updateProductSchema = Joi.object({
     name: Joi.string().messages({ 'string.empty': 'Tên sản phẩm không được để trống' }),
     price: Joi.number().min(0).messages({
@@ -43,7 +41,7 @@ const updateProductSchema = Joi.object({
     category: Joi.string().messages({ 'string.empty': 'Danh mục không được để trống' }),
     description: Joi.string().allow('').optional(),
     images: Joi.array().items(Joi.string()).optional()
-}).min(1); // Phải gửi lên ít nhất 1 trường để cập nhật
+}).min(1); 
 
 module.exports = {
     createProductSchema,

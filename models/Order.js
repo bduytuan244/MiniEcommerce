@@ -27,7 +27,6 @@ const orderSchema = new mongoose.Schema({
     email_address: { type: String },
   },
 
-  // Danh sách sản phẩm mua
   orderItems: [
     {
       name: { type: String, required: true },
@@ -42,11 +41,9 @@ const orderSchema = new mongoose.Schema({
     },
   ],
 
-  // Thông tin thanh toán
   totalPrice: { type: Number, required: true, default: 0 },
   paymentMethod: { type: String, default: 'COD' },
 
-  // Trạng thái đơn hàng
   status: { 
     type: String, 
     default: 'Chờ xác nhận',

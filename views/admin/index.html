@@ -90,11 +90,9 @@
             const adminUser = JSON.parse(adminUserStr);
             document.getElementById('admin-name').innerText = adminUser.name || 'Admin';
             
-            // 👇 Gọi hàm tải dữ liệu thống kê
             loadDashboardStats(adminToken);
         });
 
-        // Hàm gọi API lấy dữ liệu báo cáo
         async function loadDashboardStats(token) {
             try {
                 const res = await fetch('http://localhost:5000/api/dashboard/stats', {
@@ -105,7 +103,6 @@
                 
                 const data = await res.json();
                 
-                // Điền dữ liệu thật vào các thẻ đã đánh ID
                 document.getElementById('total-revenue').innerText = Number(data.totalRevenue || 0).toLocaleString('vi-VN') + ' đ';
                 document.getElementById('total-orders').innerText = data.totalOrders || 0;
                 document.getElementById('total-products').innerText = data.totalProducts || 0;
@@ -124,7 +121,7 @@
             if(confirm("Bạn muốn thoát tài khoản quản trị?")) {
                 localStorage.removeItem('adminToken');
                 localStorage.removeItem('adminUser');
-                localStorage.removeItem('token'); // Đề phòng lưu token chung
+                localStorage.removeItem('token');
                 window.location.href = 'login.html';
             }
         }
