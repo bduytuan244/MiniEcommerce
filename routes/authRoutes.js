@@ -4,7 +4,11 @@ const authController = require('../controllers/authController');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { check } = require('express-validator');
 const { checkValidation } = require('../middleware/validate');
+const validate = require('../middleware/validateMiddleware');
+const { registerSchema, loginSchema } = require('../validations/authValidation');
 
+router.post('/register', validate(registerSchema), authController.register);
+router.post('/login', validate(loginSchema), authController.login);
 // 1. Register (Có validation)
 router.post('/register', [
     check('name', 'Tên không được để trống').not().isEmpty(),
