@@ -21,10 +21,13 @@
         .form-group input, .form-group textarea, .form-group select {
             width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 14px;
         }
+        .form-group input[type="file"] { padding: 5px; background: #f9f9f9; }
         .btn-submit { background: #28a745; color: white; border: none; padding: 12px 25px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; }
         .btn-submit:hover { background: #218838; }
         .btn-cancel { background: #6c757d; color: white; border: none; padding: 12px 25px; border-radius: 4px; cursor: pointer; margin-left: 10px; font-size: 16px; }
         .btn-cancel:hover { background: #5a6268; }
+        
+        #imagePreview { max-width: 200px; margin-top: 10px; border-radius: 5px; display: none; border: 1px solid #ddd; }
     </style>
 </head>
 <body>
@@ -36,7 +39,7 @@
             <li><a href="products.html" class="active">Quản lý Sản phẩm</a></li>
             <li><a href="orders.html">Quản lý Đơn hàng</a></li>
             <li><a href="users.html">Quản lý Người dùng</a></li>
-            <li><a href="coupons.html" class="active">Quản lý Mã giảm giá</a></li>
+            <li><a href="coupons.html">Quản lý Mã giảm giá</a></li>
         </ul>
         <div style="padding: 15px; text-align: center; cursor: pointer; background: #dc3545;" onclick="logout()">Đăng xuất</div>
     </div>
@@ -76,9 +79,12 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Link Ảnh sản phẩm (*)</label>
-                        <input type="text" id="image" required placeholder="Nhập đường dẫn ảnh (URL)...">
-                        <small style="color: #666;">(Tạm thời nhập link ảnh online, ví dụ: https://via.placeholder.com/300)</small>
+                        <label>Ảnh sản phẩm (*)</label>
+                        <input type="file" id="imageFile" accept="image/png, image/jpeg, image/jpg, image/webp" onchange="previewFile()">
+                        <input type="hidden" id="imageUrl">
+                        <div>
+                            <img id="imagePreview" src="" alt="Xem trước ảnh">
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -96,7 +102,7 @@
     </div>
 
     <script>
-        const token = localStorage.getItem('adminToken');
+        const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
         if (!token) window.location.href = 'login.html';
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -121,7 +127,10 @@
                     document.getElementById('description').value = product.description;
                     
                     if (product.images && product.images.length > 0) {
-                        document.getElementById('image').value = product.images[0];
+                        document.getElementById('imageUrl').value = product.images[0];
+                        const imgSrc = product.images[0].startsWith('http') ? product.images[0] : `http://localhost:5000${product.images[0]}`;
+                        document.getElementById('imagePreview').src = imgSrc;
+                        document.getElementById('imagePreview').style.display = 'block';
                     }
                 }
             } catch (error) {
@@ -129,33 +138,68 @@
             }
         }
 
+        function previewFile() {
+            const file = document.getElementById('imageFile').files[0];
+            const preview = document.getElementById('imagePreview');
+            
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.style.display = 'block';
+            }
+        }
+
         document.getElementById('product-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            const productData = {
-                name: document.getElementById('name').value,
-                price: Number(document.getElementById('price').value),
-                countInStock: Number(document.getElementById('countInStock').value),
-                brand: document.getElementById('brand').value,
-                category: document.getElementById('category').value,
-                description: document.getElementById('description').value,
-                images: [document.getElementById('image').value] 
-            };
 
             const btnSave = document.getElementById('btn-save');
             btnSave.innerText = "Đang lưu...";
             btnSave.disabled = true;
 
             try {
-                let url, method;
+                let finalImageUrl = document.getElementById('imageUrl').value;
+                const fileInput = document.getElementById('imageFile');
 
-                if (productId) {
-                    url = `http://localhost:5000/api/products/${productId}`;
-                    method = 'PUT';
-                } else {
-                    url = 'http://localhost:5000/api/products';
-                    method = 'POST';
+                if (fileInput.files.length > 0) {
+                    btnSave.innerText = "Đang tải ảnh lên...";
+                    
+                    const formData = new FormData();
+                    formData.append('image', fileInput.files[0]);
+
+                    const uploadRes = await fetch('http://localhost:5000/api/upload', {
+                        method: 'POST',
+                        headers: { 
+                            'Authorization': `Bearer ${token}` 
+                        },
+                        body: formData
+                    });
+
+                    const uploadData = await uploadRes.json();
+
+                    if (!uploadRes.ok) {
+                        throw new Error(uploadData.message || "Lỗi khi tải ảnh lên server");
+                    }
+
+                    finalImageUrl = uploadData.imageUrl; 
                 }
+
+                if (!finalImageUrl) {
+                    throw new Error("Vui lòng chọn ảnh cho sản phẩm!");
+                }
+
+                btnSave.innerText = "Đang lưu sản phẩm...";
+
+                const productData = {
+                    name: document.getElementById('name').value,
+                    price: Number(document.getElementById('price').value),
+                    countInStock: Number(document.getElementById('countInStock').value),
+                    brand: document.getElementById('brand').value,
+                    category: document.getElementById('category').value,
+                    description: document.getElementById('description').value,
+                    images: [finalImageUrl]
+                };
+
+                const url = productId ? `http://localhost:5000/api/products/${productId}` : 'http://localhost:5000/api/products';
+                const method = productId ? 'PUT' : 'POST';
 
                 const res = await fetch(url, {
                     method: method,
@@ -176,7 +220,8 @@
                 }
 
             } catch (error) {
-                alert("Lỗi kết nối Server");
+                console.error(error);
+                alert(error.message || "Lỗi kết nối Server");
             } finally {
                 btnSave.innerText = "Lưu lại";
                 btnSave.disabled = false;
@@ -185,6 +230,7 @@
 
         function logout() {
             localStorage.removeItem('adminToken');
+            localStorage.removeItem('token');
             window.location.href = 'login.html';
         }
     </script>

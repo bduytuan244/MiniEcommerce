@@ -3,35 +3,34 @@ const router = express.Router();
 const productController = require('../controllers/productController');
 const { verifyToken, verifyAdmin } = require('../middleware/authMiddleware');
 
-const { check } = require('express-validator');
-const { checkValidation } = require('../middleware/validate');
-
 const upload = require('../config/cloudinary');
+
+const validate = require('../middleware/validateMiddleware');
+const { createProductSchema, updateProductSchema } = require('../validations/productValidation');
 
 router.get('/', productController.getProducts);
 router.get('/:id', productController.getProductById);
 
-
 router.post('/', 
   verifyToken, 
   verifyAdmin,
-  
-  upload.array('images', 5), 
-
-  [
-    check('name', 'Tên sản phẩm là bắt buộc').not().isEmpty(),
-    check('price', 'Giá phải là số và lớn hơn 0').isFloat({ gt: 0 }),
-    check('category', 'Danh mục là bắt buộc').not().isEmpty(),
-    check('brand', 'Thương hiệu là bắt buộc').not().isEmpty()
-  ],
-  
-  checkValidation, 
-  
+  upload.array('images', 5),
+  validate(createProductSchema), 
   productController.createProduct
 );
 
-router.put('/:id', verifyToken, verifyAdmin, productController.updateProduct);
+router.put('/:id', 
+  verifyToken, 
+  verifyAdmin, 
+  upload.array('images', 5), 
+  validate(updateProductSchema),
+  productController.updateProduct
+);
 
-router.delete('/:id', verifyToken, verifyAdmin, productController.deleteProduct);
+router.delete('/:id', 
+  verifyToken, 
+  verifyAdmin, 
+  productController.deleteProduct
+);
 
 module.exports = router;

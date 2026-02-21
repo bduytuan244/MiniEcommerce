@@ -60,10 +60,52 @@ exports.createOrder = async (req, res) => {
         const nameToSend = userDetail ? userDetail.name : req.user.name;
 
         if (emailToSend && typeof sendEmail === 'function') {
+            const itemsHtml = orderItemsProcessed.map(item => `
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${item.name}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${item.qty}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${(item.price * item.qty).toLocaleString('vi-VN')} đ</td>
+                </tr>
+            `).join('');
+
+            const emailHtmlTemplate = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 8px;">
+                    <h2 style="color: #28a745; text-align: center;">Cảm ơn bạn đã đặt hàng! 🎉</h2>
+                    <p>Xin chào <strong>${nameToSend}</strong>,</p>
+                    <p>Chúng tôi đã nhận được đơn hàng <strong>#${createdOrder._id.toString().slice(-6).toUpperCase()}</strong> của bạn và đang tiến hành xử lý.</p>
+                    
+                    <h3 style="border-bottom: 2px solid #eee; padding-bottom: 5px;">📦 Chi tiết đơn hàng:</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                        <thead>
+                            <tr style="background-color: #f8f9fa;">
+                                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Sản phẩm</th>
+                                <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">SL</th>
+                                <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                        </tbody>
+                    </table>
+                    
+                    <h3 style="text-align: right; color: #d32f2f;">Tổng cộng: ${calculatedTotalPrice.toLocaleString('vi-VN')} đ</h3>
+                    
+                    <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                        <p style="margin: 0 0 5px 0;"><strong>📍 Địa chỉ giao hàng:</strong> ${shippingInfo.address}</p>
+                        <p style="margin: 0;"><strong>📞 Số điện thoại:</strong> ${shippingInfo.phone}</p>
+                    </div>
+
+                    <p style="margin-top: 20px; font-size: 0.9em; color: #666; text-align: center;">Bạn có thể đăng nhập vào website để theo dõi trạng thái đơn hàng của mình.</p>
+                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="text-align: center; font-weight: bold; color: #333;">Trân trọng,<br>Ban quản trị Mini Ecommerce</p>
+                </div>
+            `;
+
             await sendEmail({
                 email: emailToSend,
-                subject: `Xác nhận đơn hàng #${createdOrder._id}`,
-                message: `Xin chào ${nameToSend},\nCảm ơn bạn đã đặt hàng. Tổng tiền: ${calculatedTotalPrice.toLocaleString()}đ`
+                subject: `🎉 Xác nhận đơn hàng #${createdOrder._id.toString().slice(-6).toUpperCase()}`,
+                message: `Xin chào ${nameToSend}, Cảm ơn bạn đã đặt hàng. Tổng tiền: ${calculatedTotalPrice.toLocaleString('vi-VN')}đ`, 
+                html: emailHtmlTemplate 
             });
         }
     } catch (err) {
