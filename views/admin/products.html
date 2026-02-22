@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản lý Sản phẩm - Admin</title>
+    <title>Form Sản phẩm - Admin</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
@@ -22,21 +22,22 @@
         .topbar { background: white; padding: 15px 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; z-index: 5;}
         .content { padding: 30px; overflow-y: auto; flex: 1; }
 
-        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .header-actions h2 { margin: 0; color: #333; }
-        .btn-add { background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
-        .btn-add:hover { background: #218838; transform: translateY(-2px); }
-
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; vertical-align: middle; }
-        th { background: #f8f9fa; color: #555; font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
-        tr:hover { background: #fafafa; }
+        .form-container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); max-width: 800px; margin: 0 auto; border-top: 4px solid #ee4d2d;}
+        .form-group { margin-bottom: 25px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; font-family: 'Inter'; outline: none; transition: 0.2s;
+        }
+        .form-group input:focus, .form-group textarea:focus { border-color: #ee4d2d; }
+        .form-group input[type="file"] { padding: 8px; background: #f9f9f9; cursor: pointer; }
         
-        .btn-action { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; margin-right: 5px; font-size: 0.9rem; transition: 0.2s; }
-        .btn-edit { background: #ffc107; color: #333; }
-        .btn-edit:hover { background: #e0a800; }
-        .btn-delete { background: #dc3545; }
-        .btn-delete:hover { background: #c82333; }
+        .btn-submit { background: #28a745; color: white; border: none; padding: 12px 30px; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px;}
+        .btn-submit:hover { background: #218838; }
+        .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-cancel { background: #6c757d; color: white; border: none; padding: 12px 30px; border-radius: 6px; cursor: pointer; margin-left: 15px; font-size: 1rem; transition: 0.2s; font-weight: 600; text-decoration: none; display: inline-block;}
+        .btn-cancel:hover { background: #5a6268; }
+        
+        #imagePreview { max-width: 200px; max-height: 200px; margin-top: 15px; border-radius: 8px; display: none; border: 1px solid #ddd; padding: 5px; object-fit: contain; }
     </style>
 </head>
 <body>
@@ -55,112 +56,201 @@
 
     <div class="main-content">
         <div class="topbar">
-            <h3 style="margin: 0; color: #555;">Quản lý Sản phẩm</h3>
+            <h3 style="margin: 0; color: #555;" id="topbar-title">Quản lý Sản phẩm / Thêm mới</h3>
         </div>
 
         <div class="content">
-            <div class="header-actions">
-                <h2>Danh sách sản phẩm</h2>
-                <button class="btn-add" onclick="window.location.href='product-form.html'"><i class="fa-solid fa-plus"></i> Thêm sản phẩm mới</button>
-            </div>
+            <h2 style="text-align: center; margin-bottom: 30px; color: #333;" id="page-title">THÊM SẢN PHẨM MỚI</h2>
+            
+            <div class="form-container">
+                <form id="product-form">
+                    
+                    <div class="form-group">
+                        <label>Tên sản phẩm (*)</label>
+                        <input type="text" id="name" required placeholder="Ví dụ: Điện thoại thông minh thế hệ mới">
+                    </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Ảnh</th>
-                        <th>Tên sản phẩm</th>
-                        <th>Giá</th>
-                        <th style="text-align: center;">Kho</th>
-                        <th>Thương hiệu</th>
-                        <th style="text-align: center;">Hành động</th>
-                    </tr>
-                </thead>
-                <tbody id="product-table-body">
-                    <tr><td colspan="6" style="text-align:center; color: #888;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải dữ liệu...</td></tr>
-                </tbody>
-            </table>
+                    <div style="display: flex; gap: 20px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label>Giá tiền (VNĐ) (*)</label>
+                            <input type="number" id="price" required placeholder="Ví dụ: 30000000" min="0">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>Số lượng trong kho (*)</label>
+                            <input type="number" id="countInStock" required value="0" min="0">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 20px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label>Thương hiệu (*)</label>
+                            <input type="text" id="brand" required placeholder="Ví dụ: Apple, Samsung">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>Danh mục (*)</label>
+                            <input type="text" id="category" required placeholder="Ví dụ: Điện thoại">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ảnh sản phẩm (*)</label>
+                        <input type="file" id="imageFile" accept="image/png, image/jpeg, image/jpg, image/webp" onchange="previewFile()">
+                        <input type="hidden" id="imageUrl">
+                        <div>
+                            <img id="imagePreview" src="" alt="Xem trước ảnh">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Mô tả chi tiết</label>
+                        <textarea id="description" rows="5" placeholder="Viết mô tả chi tiết cho sản phẩm..."></textarea>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 30px;">
+                        <button type="submit" class="btn-submit" id="btn-save"><i class="fa-solid fa-floppy-disk"></i> Lưu dữ liệu</button>
+                        <a href="products.html" class="btn-cancel">Hủy bỏ</a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
     <script>
-        const token = localStorage.getItem('adminToken');
+        const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
         if (!token) window.location.href = 'login.html';
 
-        async function loadProducts() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id'); 
+
+        if (productId) {
+            document.getElementById('page-title').innerText = "CHỈNH SỬA SẢN PHẨM";
+            document.getElementById('topbar-title').innerText = "Quản lý Sản phẩm / Cập nhật";
+            loadProductData(productId);
+        }
+
+        async function loadProductData(id) {
             try {
-                const res = await fetch('http://localhost:5000/api/products?limit=100'); 
-                const data = await res.json();
-                const tbody = document.getElementById('product-table-body');
-                
-                if (data.products.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Chưa có sản phẩm nào</td></tr>';
-                    return;
+                const res = await fetch(`http://localhost:5000/api/products/${id}`);
+                const product = await res.json();
+
+                if(res.ok) {
+                    document.getElementById('name').value = product.name;
+                    document.getElementById('price').value = product.price;
+                    document.getElementById('countInStock').value = product.countInStock;
+                    document.getElementById('brand').value = product.brand;
+                    document.getElementById('category').value = product.category;
+                    document.getElementById('description').value = product.description;
+                    
+                    if (product.images && product.images.length > 0) {
+                        document.getElementById('imageUrl').value = product.images[0];
+                        const imgSrc = product.images[0].startsWith('http') ? product.images[0] : `http://localhost:5000${product.images[0]}`;
+                        document.getElementById('imagePreview').src = imgSrc;
+                        document.getElementById('imagePreview').style.display = 'block';
+                    }
                 }
-
-                tbody.innerHTML = data.products.map(p => `
-                    <tr>
-                        <td><img src="${p.images[0] || 'https://via.placeholder.com/50'}" width="50" height="50" style="object-fit:contain; border-radius:6px; border: 1px solid #eee; padding: 2px; background: white;"></td>
-                        <td><strong style="color: #333;">${p.name}</strong></td>
-                        <td style="color:#ee4d2d; font-weight:bold;">${Number(p.price).toLocaleString('vi-VN')} đ</td>
-                        <td style="text-align: center;">
-                            <span style="padding: 4px 10px; border-radius: 12px; background: ${p.stock > 0 ? '#e6f4ea; color: #1e7e34' : '#f8d7da; color: #721c24'}; font-size: 0.85rem; font-weight: 600;">
-                                ${p.stock}
-                            </span>
-                        </td>
-                        <td>${p.brand}</td>
-                        <td style="text-align: center;">
-                            <button class="btn-action btn-edit" onclick="editProduct('${p._id}')" title="Sửa"><i class="fa-solid fa-pen-to-square"></i></button>
-                            <button class="btn-action btn-delete" onclick="deleteProduct('${p._id}')" title="Xóa"><i class="fa-solid fa-trash-can"></i></button>
-                        </td>
-                    </tr>
-                `).join('');
-
             } catch (error) {
-                console.error(error);
-                Swal.fire('Lỗi', 'Lỗi tải danh sách sản phẩm!', 'error');
+                Swal.fire('Lỗi', 'Không thể tải thông tin sản phẩm', 'error');
             }
         }
 
-        async function deleteProduct(id) {
-            Swal.fire({
-                title: 'Cảnh báo!',
-                text: "Bạn chắc chắn muốn xóa sản phẩm này? Hành động không thể hoàn tác.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Đồng ý xóa',
-                cancelButtonText: 'Hủy'
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    try {
-                        const res = await fetch(`http://localhost:5000/api/products/${id}`, {
-                            method: 'DELETE',
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-
-                        if (res.ok) {
-                            Swal.fire({title: 'Đã xóa!', icon: 'success', timer: 1500, showConfirmButton: false});
-                            loadProducts(); 
-                        } else {
-                            const data = await res.json();
-                            Swal.fire('Lỗi', data.message, 'error');
-                        }
-                    } catch (error) {
-                        Swal.fire('Lỗi', 'Lỗi kết nối Server', 'error');
-                    }
-                }
-            });
+        function previewFile() {
+            const file = document.getElementById('imageFile').files[0];
+            const preview = document.getElementById('imagePreview');
+            
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.style.display = 'block';
+            }
         }
 
-        function editProduct(id) { window.location.href = `product-form.html?id=${id}`; }
+        document.getElementById('product-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const btnSave = document.getElementById('btn-save');
+            btnSave.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+            btnSave.disabled = true;
+
+            try {
+                let finalImageUrl = document.getElementById('imageUrl').value;
+                const fileInput = document.getElementById('imageFile');
+
+                if (fileInput.files.length > 0) {
+                    btnSave.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải ảnh lên...';
+                    
+                    const formData = new FormData();
+                    formData.append('image', fileInput.files[0]);
+
+                    const uploadRes = await fetch('http://localhost:5000/api/upload', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        body: formData
+                    });
+
+                    const uploadData = await uploadRes.json();
+
+                    if (!uploadRes.ok) {
+                        throw new Error(uploadData.message || "Lỗi khi tải ảnh lên server");
+                    }
+                    finalImageUrl = uploadData.imageUrl; 
+                }
+
+                if (!finalImageUrl) {
+                    throw new Error("Vui lòng chọn ảnh cho sản phẩm!");
+                }
+
+                btnSave.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu Database...';
+
+                const productData = {
+                    name: document.getElementById('name').value,
+                    price: Number(document.getElementById('price').value),
+                    countInStock: Number(document.getElementById('countInStock').value),
+                    brand: document.getElementById('brand').value,
+                    category: document.getElementById('category').value,
+                    description: document.getElementById('description').value,
+                    images: [finalImageUrl]
+                };
+
+                const url = productId ? `http://localhost:5000/api/products/${productId}` : 'http://localhost:5000/api/products';
+                const method = productId ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify(productData)
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    Swal.fire({
+                        title: 'Thành công!',
+                        text: productId ? "Cập nhật sản phẩm thành công." : "Thêm sản phẩm mới thành công.",
+                        icon: 'success',
+                        allowOutsideClick: false
+                    }).then(() => {
+                        window.location.href = 'products.html'; 
+                    });
+                } else {
+                    Swal.fire('Lỗi', data.message, 'error');
+                    btnSave.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu dữ liệu';
+                    btnSave.disabled = false;
+                }
+
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Lỗi', error.message || "Lỗi kết nối Server", 'error');
+                btnSave.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu dữ liệu';
+                btnSave.disabled = false;
+            }
+        });
 
         function logout() {
             localStorage.removeItem('adminToken');
             window.location.href = 'login.html';
         }
-
-        loadProducts();
     </script>
 </body>
 </html>

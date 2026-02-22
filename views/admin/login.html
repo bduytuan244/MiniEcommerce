@@ -3,28 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - Mini Ecommerce</title>
+    <title>Đăng nhập Quản trị - Mini Ecommerce</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        body { margin: 0; padding: 0; background: #2c3e50; font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .login-box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 350px; text-align: center; }
-        .login-box h2 { margin-bottom: 20px; color: #333; }
-        .login-box input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        .login-box button { width: 100%; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        .login-box button:hover { background: #c0392b; }
-        #error-msg { color: red; margin-bottom: 15px; font-size: 0.9em; display: none; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { margin: 0; padding: 0; background: linear-gradient(135deg, #1e293b 0%, #2c3e50 100%); font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        
+        .login-box { background: white; padding: 40px 35px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; max-width: 400px; box-sizing: border-box; text-align: center; }
+        
+        .logo-icon { font-size: 3rem; color: #e74c3c; margin-bottom: 10px; }
+        .login-box h2 { margin-top: 0; margin-bottom: 25px; color: #333; font-size: 1.5rem; letter-spacing: 1px; text-transform: uppercase; }
+        
+        .form-group { position: relative; margin-bottom: 20px; text-align: left; }
+        .form-group i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #888; }
+        .form-group input { width: 100%; padding: 14px 14px 14px 42px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Inter', sans-serif; font-size: 1rem; transition: 0.2s; background: #f8f9fa;}
+        .form-group input:focus { border-color: #e74c3c; outline: none; background: white; box-shadow: 0 0 0 3px rgba(231,76,60,0.1); }
+        
+        .btn-login { width: 100%; padding: 14px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-size: 1.05rem; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .btn-login:hover { background: #c0392b; }
+        .btn-login:disabled { background: #ccc; cursor: not-allowed; }
+
+        .back-link { display: inline-flex; align-items: center; gap: 8px; margin-top: 25px; text-decoration: none; color: #7f8c8d; font-size: 0.95rem; font-weight: 600; transition: 0.2s; }
+        .back-link:hover { color: #34495e; }
     </style>
 </head>
 <body>
 
     <div class="login-box">
-        <h2>HỆ THỐNG QUẢN TRỊ</h2>
-        <p id="error-msg"></p>
+        <i class="fa-solid fa-shield-halved logo-icon"></i>
+        <h2>Hệ Thống Quản Trị</h2>
+        
         <form id="admin-login-form">
-            <input type="email" id="email" placeholder="Email quản trị viên" required>
-            <input type="password" id="password" placeholder="Mật khẩu" required>
-            <button type="submit" id="btn-login">ĐĂNG NHẬP ADMIN</button>
+            <div class="form-group">
+                <i class="fa-solid fa-envelope"></i>
+                <input type="email" id="email" placeholder="Email quản trị viên" required>
+            </div>
+            <div class="form-group">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" id="password" placeholder="Mật khẩu" required>
+            </div>
+            <button type="submit" id="btn-login" class="btn-login">
+                ĐĂNG NHẬP ADMIN <i class="fa-solid fa-arrow-right-to-bracket"></i>
+            </button>
         </form>
-        <a href="../home/index.html" style="display:block; margin-top:20px; text-decoration:none; color:#3498db; font-size:0.9em;">← Về trang Khách hàng</a>
+
+        <a href="../auth/login.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Đăng nhập Khách hàng</a>
     </div>
 
     <script>
@@ -33,11 +57,9 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const btn = document.getElementById('btn-login');
-            const errorMsg = document.getElementById('error-msg');
 
-            btn.innerText = "Đang xử lý...";
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ĐANG XÁC THỰC...';
             btn.disabled = true;
-            errorMsg.style.display = 'none';
 
             try {
                 const res = await fetch('http://localhost:5000/api/auth/login', {
@@ -52,21 +74,30 @@
                     if (data.user && data.user.isAdmin === true) {
                         localStorage.setItem('adminToken', data.accessToken);
                         localStorage.setItem('adminUser', JSON.stringify(data.user));
-                        window.location.href = 'index.html';
+                        
+                        Swal.fire({
+                            title: 'Xác thực thành công!',
+                            text: 'Đang chuyển vào trang Quản trị...',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false,
+                            allowOutsideClick: false
+                        }).then(() => {
+                            window.location.href = 'index.html';
+                        });
                     } else {
-                        errorMsg.innerText = "Bạn không có quyền quản trị (Not an Admin)!";
-                        errorMsg.style.display = 'block';
+                        Swal.fire('Cảnh báo bảo mật', 'Tài khoản của bạn KHÔNG có quyền truy cập vào khu vực này!', 'warning');
                     }
                 } else {
-                    errorMsg.innerText = "Lỗi: " + data.message;
-                    errorMsg.style.display = 'block';
+                    Swal.fire('Lỗi đăng nhập', data.message, 'error');
                 }
             } catch (error) {
-                errorMsg.innerText = "Lỗi kết nối Server!";
-                errorMsg.style.display = 'block';
+                Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ!', 'error');
             } finally {
-                btn.innerText = "ĐĂNG NHẬP ADMIN";
-                btn.disabled = false;
+                if(!res?.ok || (data?.user && !data.user.isAdmin)){
+                    btn.innerHTML = 'ĐĂNG NHẬP ADMIN <i class="fa-solid fa-arrow-right-to-bracket"></i>';
+                    btn.disabled = false;
+                }
             }
         });
     </script>
