@@ -4,54 +4,75 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý Đơn hàng - Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        body { margin: 0; font-family: Arial, sans-serif; display: flex; height: 100vh; background: #f4f6f9; }
-        .sidebar { width: 250px; background: #343a40; color: white; display: flex; flex-direction: column; }
-        .sidebar h2 { text-align: center; padding: 20px 0; margin: 0; background: #23272b; border-bottom: 1px solid #4f5962; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { margin: 0; font-family: 'Inter', sans-serif; display: flex; height: 100vh; background: #f4f6f9; }
+        .sidebar { width: 250px; background: #343a40; color: white; display: flex; flex-direction: column; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 10;}
+        .sidebar h2 { text-align: center; padding: 20px 0; margin: 0; background: #23272b; border-bottom: 1px solid #4f5962; font-size: 1.2rem; letter-spacing: 1px;}
         .menu { list-style: none; padding: 0; margin: 0; flex: 1; }
         .menu li { border-bottom: 1px solid #4f5962; }
-        .menu a { display: block; padding: 15px 20px; color: #c2c7d0; text-decoration: none; transition: 0.3s; }
-        .menu a:hover, .menu a.active { background: #007bff; color: white; }
+        .menu a { display: flex; align-items: center; gap: 10px; padding: 15px 20px; color: #c2c7d0; text-decoration: none; transition: 0.3s; }
+        .menu a:hover, .menu a.active { background: #ee4d2d; color: white; }
+        .logout-btn { padding: 15px; background: #dc3545; color: white; text-align: center; cursor: pointer; transition: 0.2s;}
+        .logout-btn:hover { background: #c82333;}
+        
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .topbar { background: white; padding: 15px 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; z-index: 5;}
         .content { padding: 30px; overflow-y: auto; flex: 1; }
-        .sidebar .logout-btn { padding: 15px; background: #dc3545; color: white; text-align: center; cursor: pointer; }
 
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #17a2b8; color: white; }
-        tr:hover { background: #f1f1f1; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; vertical-align: middle;}
+        th { background: #f8f9fa; color: #555; font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
+        tr:hover { background: #fafafa; }
 
-        .badge { padding: 5px 10px; border-radius: 4px; color: white; font-size: 0.8em; font-weight: bold; }
-        .bg-pending { background: #ffc107; color: #333; } 
-        .bg-processing { background: #17a2b8; } 
-        .bg-shipped { background: #007bff; } 
-        .bg-delivered { background: #28a745; } 
-        .bg-cancelled { background: #dc3545; } 
+        .badge { padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; display: inline-block; text-align: center; }
+        .bg-pending { background-color: #fff3cd; color: #856404; }
+        .bg-processing { background-color: #d1ecf1; color: #0c5460; }
+        .bg-shipped { background-color: #cce5ff; color: #004085; }
+        .bg-delivered { background-color: #d4edda; color: #155724; }
+        .bg-cancelled { background-color: #f8d7da; color: #721c24; }
 
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 20px; border-radius: 8px; width: 600px; max-width: 90%; max-height: 90vh; overflow-y: auto; }
-        .modal-header { display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; }
-        .btn-update { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; }
+        .btn-view { background: #f0f8ff; color: #007bff; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        .btn-view:hover { background: #cce5ff; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(2px); }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 650px; max-width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 5px 25px rgba(0,0,0,0.2); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
+        .modal-header h3 { margin: 0; color: #333; }
+        .close-btn { cursor: pointer; font-size: 1.5em; color: #888; transition: 0.2s; }
+        .close-btn:hover { color: #dc3545; }
+        
+        .update-box { margin-top: 25px; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #eee; }
+        .btn-update { background: #28a745; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 15px; font-weight: bold; font-size: 1rem; transition: 0.2s;}
         .btn-update:hover { background: #218838; }
+        select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-family: 'Inter'; font-size: 0.95rem; outline: none;}
+        select:focus { border-color: #007bff; }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
-        <h2>MINI ADMIN</h2>
+        <h2><i class="fa-solid fa-gear"></i> MINI ADMIN</h2>
         <ul class="menu">
-            <li><a href="index.html">Tổng quan</a></li>
-            <li><a href="products.html">Quản lý Sản phẩm</a></li>
-            <li><a href="orders.html" class="active">Quản lý Đơn hàng</a></li>
-            <li><a href="users.html">Quản lý Người dùng</a></li>
-            <li><a href="coupons.html" class="active">Quản lý Mã giảm giá</a></li>
+            <li><a href="index.html"><i class="fa-solid fa-chart-pie"></i> Tổng quan</a></li>
+            <li><a href="products.html"><i class="fa-solid fa-boxes-stacked"></i> Sản phẩm</a></li>
+            <li><a href="orders.html" class="active"><i class="fa-solid fa-cart-flatbed"></i> Đơn hàng</a></li>
+            <li><a href="users.html"><i class="fa-solid fa-users-gear"></i> Người dùng</a></li>
+            <li><a href="coupons.html"><i class="fa-solid fa-ticket"></i> Mã giảm giá</a></li>
         </ul>
-        <div class="logout-btn" onclick="logout()"> Đăng xuất</div>
+        <div class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</div>
     </div>
 
     <div class="main-content">
+        <div class="topbar">
+            <h3 style="margin: 0; color: #555;">Quản lý Đơn hàng</h3>
+        </div>
+
         <div class="content">
-            <h2 style="margin-top: 0;">Danh sách Đơn hàng</h2>
+            <h2 style="margin-top: 0; color: #333; margin-bottom: 20px;">Danh sách Đơn hàng</h2>
             <table>
                 <thead>
                     <tr>
@@ -59,12 +80,12 @@
                         <th>Khách hàng</th>
                         <th>Ngày đặt</th>
                         <th>Tổng tiền</th>
-                        <th>Trạng thái</th>
-                        <th>Hành động</th>
+                        <th style="text-align: center;">Trạng thái</th>
+                        <th style="text-align: center;">Hành động</th>
                     </tr>
                 </thead>
                 <tbody id="order-table-body">
-                    <tr><td colspan="6" style="text-align:center;">Đang tải...</td></tr>
+                    <tr><td colspan="6" style="text-align:center; color:#888;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -73,16 +94,15 @@
     <div id="orderModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 style="margin:0">Chi tiết đơn hàng <span id="modalOrderId"></span></h3>
-                <span style="cursor:pointer; font-size:1.5em;" onclick="closeModal()">&times;</span>
+                <h3>Chi tiết đơn hàng <span id="modalOrderId" style="color:#ee4d2d;"></span></h3>
+                <span class="close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></span>
             </div>
             
-            <div id="modalBody">
-                </div>
+            <div id="modalBody"></div>
 
-            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
-                <label style="font-weight: bold;">Cập nhật trạng thái:</label>
-                <select id="statusSelect" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;">
+            <div class="update-box">
+                <label style="font-weight: 600; color: #444; display:block; margin-bottom:10px;"><i class="fa-solid fa-pen"></i> Cập nhật trạng thái:</label>
+                <select id="statusSelect">
                     <option value="Chờ xác nhận">Chờ xác nhận</option>
                     <option value="Đang đóng gói">Đang đóng gói</option>
                     <option value="Đang vận chuyển">Đang vận chuyển</option>
@@ -90,7 +110,7 @@
                     <option value="Đã hủy">Hủy đơn</option>
                     <option value="Trả hàng">Trả hàng</option>
                 </select>
-                <button class="btn-update" id="btn-update-status" onclick="updateStatus()">Cập nhật ngay</button>
+                <button class="btn-update" id="btn-update-status" onclick="updateStatus()"><i class="fa-solid fa-check-double"></i> Lưu thay đổi</button>
             </div>
         </div>
     </div>
@@ -98,7 +118,6 @@
     <script>
         const token = localStorage.getItem('adminToken');
         if (!token) window.location.href = 'login.html';
-
         let currentOrderId = null;
 
         async function loadOrders() {
@@ -106,15 +125,7 @@
                 const res = await fetch('http://localhost:5000/api/orders', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                
                 const data = await res.json();
-
-                if (!res.ok) {
-                    alert("Lỗi tải đơn: " + (data.message || res.statusText));
-                    if (res.status === 401 || res.status === 403) window.location.href = 'login.html';
-                    return;
-                }
-
                 const tbody = document.getElementById('order-table-body');
                 
                 if (!data || data.length === 0) {
@@ -125,7 +136,6 @@
                 tbody.innerHTML = data.map(order => {
                     let badgeClass = 'bg-pending';
                     const status = order.status || 'Chờ xác nhận';
-                    
                     if (status === 'Đang đóng gói') badgeClass = 'bg-processing';
                     if (status === 'Đang vận chuyển') badgeClass = 'bg-shipped';
                     if (status === 'Hoàn thành') badgeClass = 'bg-delivered';
@@ -133,31 +143,29 @@
 
                     return `
                         <tr>
-                            <td>#${order._id.slice(-6).toUpperCase()}</td>
+                            <td style="font-weight:600; color:#0056b3;">#${order._id.slice(-6).toUpperCase()}</td>
                             <td>
-                                <div style="font-weight:bold;">${order.customerName || (order.user ? order.user.name : 'Khách vãng lai')}</div>
-                                <small style="color:#666">${order.user ? order.user.email : ''}</small>
+                                <div style="font-weight:600; color:#333;">${order.customerName || (order.user ? order.user.name : 'Khách vãng lai')}</div>
+                                <small style="color:#888"><i class="fa-solid fa-envelope"></i> ${order.user ? order.user.email : ''}</small>
                             </td>
                             <td>${new Date(order.createdAt).toLocaleDateString('vi-VN')}</td>
-                            <td style="font-weight:bold; color:#d32f2f;">${Number(order.totalPrice).toLocaleString('vi-VN')} đ</td>
-                            <td><span class="badge ${badgeClass}">${status}</span></td>
-                            <td>
-                                <button onclick="openModal('${order._id}')" style="padding:5px 10px; border:1px solid #ddd; background:white; cursor:pointer; border-radius:4px;">👁️ Xem</button>
+                            <td style="font-weight:bold; color:#ee4d2d;">${Number(order.totalPrice).toLocaleString('vi-VN')} đ</td>
+                            <td style="text-align: center;"><span class="badge ${badgeClass}">${status}</span></td>
+                            <td style="text-align: center;">
+                                <button onclick="openModal('${order._id}')" class="btn-view"><i class="fa-solid fa-eye"></i> Xem</button>
                             </td>
                         </tr>
                     `;
                 }).join('');
-
             } catch (error) {
-                console.error("Lỗi JS:", error);
-                alert('Lỗi kết nối hoặc xử lý dữ liệu!');
+                Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
             }
         }
 
         async function openModal(id) {
             currentOrderId = id;
             document.getElementById('orderModal').style.display = 'flex';
-            document.getElementById('modalBody').innerHTML = '<p style="text-align:center;">Đang tải chi tiết...</p>';
+            document.getElementById('modalBody').innerHTML = '<p style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</p>';
             document.getElementById('modalOrderId').innerText = '#' + id.slice(-6).toUpperCase();
 
             try {
@@ -165,92 +173,87 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const order = await res.json();
-
                 if (!res.ok) throw new Error(order.message || 'Lỗi server');
 
                 document.getElementById('statusSelect').value = order.status || 'Chờ xác nhận';
 
                 const itemsHtml = order.orderItems.map(item => `
-                    <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed #eee;">
-                        <div style="display:flex; gap:10px;">
-                            <img src="${item.image || 'https://via.placeholder.com/50'}" width="50" height="50" style="object-fit:cover; border-radius:4px;">
+                    <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed #eee; align-items:center;">
+                        <div style="display:flex; gap:15px; align-items:center;">
+                            <img src="${item.image || 'https://via.placeholder.com/50'}" width="50" height="50" style="object-fit:cover; border-radius:6px; border:1px solid #ddd;">
                             <div>
-                                <div style="font-weight:bold;">${item.name}</div>
-                                <small>x ${item.qty}</small>
+                                <div style="font-weight:600; color:#333;">${item.name}</div>
+                                <small style="color:#666;">Số lượng: ${item.qty}</small>
                             </div>
                         </div>
-                        <div style="font-weight:bold; color:#d32f2f;">${(item.qty * item.price).toLocaleString('vi-VN')} đ</div>
+                        <div style="font-weight:bold; color:#ee4d2d;">${(item.qty * item.price).toLocaleString('vi-VN')} đ</div>
                     </div>
                 `).join('');
 
                 document.getElementById('modalBody').innerHTML = `
-                    <div style="background:#f9f9f9; padding:15px; border-radius:4px; margin-bottom:15px; line-height: 1.6;">
-                        <strong>Người nhận:</strong> ${order.customerName || (order.user ? order.user.name : 'N/A')}<br>
-                        <strong>SĐT:</strong> ${order.phone || 'N/A'}<br>
-                        <strong>Địa chỉ:</strong> ${order.address || 'N/A'}<br>
-                        <strong>Thanh toán:</strong> ${order.paymentMethod} - 
-                        ${order.isPaid ? '<span style="color:green; font-weight:bold;">Đã trả tiền</span>' : '<span style="color:red; font-weight:bold;">❌ Chưa trả tiền</span>'}
+                    <div style="background:#f8f9fa; padding:15px 20px; border-radius:8px; margin-bottom:20px; border:1px solid #eee; line-height: 1.8;">
+                        <div style="color:#444;"><strong><i class="fa-solid fa-user"></i> Người nhận:</strong> ${order.customerName || (order.user ? order.user.name : 'N/A')}</div>
+                        <div style="color:#444;"><strong><i class="fa-solid fa-phone"></i> SĐT:</strong> ${order.phone || 'N/A'}</div>
+                        <div style="color:#444;"><strong><i class="fa-solid fa-location-dot"></i> Địa chỉ:</strong> ${order.address || 'N/A'}</div>
+                        <div style="color:#444;"><strong><i class="fa-solid fa-wallet"></i> Thanh toán:</strong> ${order.paymentMethod} - 
+                        ${order.isPaid ? '<span style="color:#28a745; font-weight:bold;"><i class="fa-solid fa-check"></i> Đã trả tiền</span>' : '<span style="color:#dc3545; font-weight:bold;"><i class="fa-solid fa-xmark"></i> Chưa trả tiền</span>'}</div>
                     </div>
-                    <h4 style="margin:0 0 10px 0; border-bottom: 2px solid #eee; padding-bottom: 5px;">Sản phẩm:</h4>
-                    <div style="max-height: 200px; overflow-y: auto;">
-                        ${itemsHtml}
+                    <h4 style="margin:0 0 10px 0; color:#333;"><i class="fa-solid fa-box"></i> Chi tiết sản phẩm:</h4>
+                    <div style="max-height: 250px; overflow-y: auto; padding-right:5px;">${itemsHtml}</div>
+                    <div style="text-align:right; font-size:1.3rem; font-weight:bold; color:#ee4d2d; margin-top:20px; border-top:2px solid #eee; padding-top:15px;">
+                        Tổng cộng: ${Number(order.totalPrice).toLocaleString('vi-VN')} đ
                     </div>
-                    <h3 style="text-align:right; color:#d32f2f; margin-top:15px;">Tổng: ${Number(order.totalPrice).toLocaleString('vi-VN')} đ</h3>
                 `;
-
             } catch (error) {
-                console.error(error);
                 document.getElementById('modalBody').innerHTML = `<p style="color:red; text-align:center;">${error.message}</p>`;
             }
         }
 
         async function updateStatus() {
-            if (!confirm("Bạn chắc chắn muốn cập nhật trạng thái đơn hàng này?")) return;
-
             const newStatus = document.getElementById('statusSelect').value;
-            const btn = document.getElementById('btn-update-status');
-            btn.innerText = "Đang lưu...";
-            btn.disabled = true;
+            
+            Swal.fire({
+                title: 'Xác nhận cập nhật',
+                text: `Đổi trạng thái đơn hàng thành "${newStatus}"?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Đồng ý'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const btn = document.getElementById('btn-update-status');
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu...';
+                    btn.disabled = true;
 
-            try {
-                const res = await fetch(`http://localhost:5000/api/orders/${currentOrderId}/status`, {
-                    method: 'PUT',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ status: newStatus })
-                });
+                    try {
+                        const res = await fetch(`http://localhost:5000/api/orders/${currentOrderId}/status`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ status: newStatus })
+                        });
 
-                if (res.ok) {
-                    alert("Cập nhật thành công!");
-                    closeModal();
-                    loadOrders(); 
-                } else {
-                    const data = await res.json();
-                    alert("Lỗi: " + data.message);
+                        if (res.ok) {
+                            Swal.fire({title: 'Thành công!', icon: 'success', timer: 1500, showConfirmButton: false});
+                            closeModal();
+                            loadOrders(); 
+                        } else {
+                            const data = await res.json();
+                            Swal.fire('Lỗi', data.message, 'error');
+                        }
+                    } catch (error) {
+                        Swal.fire('Lỗi', 'Lỗi kết nối Server', 'error');
+                    } finally {
+                        btn.innerHTML = '<i class="fa-solid fa-check-double"></i> Lưu thay đổi';
+                        btn.disabled = false;
+                    }
                 }
-            } catch (error) {
-                alert("Lỗi kết nối Server");
-            } finally {
-                btn.innerText = "Cập nhật ngay";
-                btn.disabled = false;
-            }
+            });
         }
 
-        function closeModal() {
-            document.getElementById('orderModal').style.display = 'none';
-        }
-
-        function logout() {
-            localStorage.removeItem('adminToken');
-            window.location.href = 'login.html';
-        }
-
-        window.onclick = function(event) {
-            const modal = document.getElementById('orderModal');
-            if (event.target == modal) closeModal();
-        }
+        function closeModal() { document.getElementById('orderModal').style.display = 'none'; }
+        function logout() { localStorage.removeItem('adminToken'); window.location.href = 'login.html'; }
+        window.onclick = function(e) { if (e.target == document.getElementById('orderModal')) closeModal(); }
 
         loadOrders();
     </script>
