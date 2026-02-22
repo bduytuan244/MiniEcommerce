@@ -3,64 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thanh toán đơn hàng</title>
+    <title>Thanh toán đơn hàng - Mini Ecommerce</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="../assets/css/style.css">
+    
     <style>
-        .checkout-container { max-width: 900px; margin: 30px auto; padding: 20px; display: flex; gap: 30px; }
-        .checkout-form, .checkout-summary { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .checkout-form { flex: 2; }
-        .checkout-summary { flex: 1; height: fit-content; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold;}
-        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        .btn-submit { width: 100%; background: #28a745; color: white; padding: 12px; border: none; border-radius: 5px; font-size: 1.1em; cursor: pointer; margin-top: 10px; }
-        .btn-submit:hover { background: #218838; }
-        .summary-item { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #eee; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f5f5f5; margin: 0; }
+
+        .breadcrumb { max-width: 1000px; margin: 20px auto; padding: 0 20px; color: #555; font-size: 0.9rem; }
+        .breadcrumb a { color: #0056b3; text-decoration: none; }
+
+        .checkout-container { 
+            max-width: 1000px; margin: 0 auto 50px; padding: 0 20px;
+            display: flex; gap: 30px; align-items: flex-start;
+        }
+        
+        .checkout-form { 
+            flex: 6; background: white; padding: 30px; 
+            border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); 
+        }
+        .checkout-form h2 { margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; font-size: 1.4rem; color: #333; margin-bottom: 25px;}
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; }
+        .input-wrapper { position: relative; }
+        .input-wrapper i { position: absolute; left: 15px; top: 14px; color: #888; }
+        .form-group input, .form-group textarea, .form-group select { 
+            width: 100%; padding: 12px 12px 12px 40px; 
+            border: 1px solid #ddd; border-radius: 8px; 
+            box-sizing: border-box; font-family: 'Inter', sans-serif; font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+        .form-group select { padding-left: 40px; cursor: pointer; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: #ee4d2d; outline: none; }
+        
+        .btn-submit { 
+            width: 100%; background: #ee4d2d; color: white; padding: 15px; 
+            border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; 
+            cursor: pointer; margin-top: 15px; transition: background 0.2s; 
+        }
+        .btn-submit:hover { background: #d73a1c; }
+        .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+
+        .checkout-summary { 
+            flex: 4; background: white; padding: 25px; 
+            border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 90px;
+        }
+        .checkout-summary h2 { margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; font-size: 1.2rem; color: #333; }
+        
+        .summary-item { display: flex; justify-content: space-between; margin-bottom: 15px; color: #555; }
+        
+        .coupon-section { margin-top: 25px; padding-top: 20px; border-top: 1px dashed #ddd; }
+        .coupon-box { display: flex; gap: 10px; margin-top: 10px; }
+        .coupon-box input { flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 6px; outline: none; text-transform: uppercase; }
+        .coupon-box input:focus { border-color: #ee4d2d; }
+        .coupon-box button { padding: 10px 20px; background: #333; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        .coupon-box button:hover { background: #555; }
+        #coupon-message { margin-top: 10px; font-size: 0.9rem; }
+
+        .final-price-box { margin-top: 25px; padding-top: 20px; border-top: 2px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .final-price-box span:first-child { font-size: 1.1rem; font-weight: 600; color: #333; }
+        #final-total { font-size: 1.8rem; font-weight: 700; color: #ee4d2d; }
     </style>
 </head>
 <body>
     <div id="header"></div>
 
+    <div class="breadcrumb">
+        <a href="../home/index.html">Trang chủ</a> <i class="fa-solid fa-angle-right" style="font-size: 0.8em; margin: 0 5px;"></i> 
+        <a href="../cart/cart.html">Giỏ hàng</a> <i class="fa-solid fa-angle-right" style="font-size: 0.8em; margin: 0 5px;"></i> Thanh toán
+    </div>
+
     <div class="checkout-container">
         <div class="checkout-form">
-            <h2>Thông tin giao hàng</h2>
+            <h2><i class="fa-solid fa-map-location-dot" style="color: #ee4d2d; margin-right: 10px;"></i>Thông tin nhận hàng</h2>
             <form id="order-form">
                 <div class="form-group">
                     <label>Họ và tên người nhận</label>
-                    <input type="text" id="shippingName" required placeholder="Nhập họ tên...">
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" id="shippingName" required placeholder="Nhập họ tên đầy đủ...">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Số điện thoại</label>
-                    <input type="text" id="shippingPhone" required placeholder="Ví dụ: 0987654321">
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-phone"></i>
+                        <input type="text" id="shippingPhone" required placeholder="Ví dụ: 0987654321">
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label>Địa chỉ giao hàng (Số nhà, đường, phường/xã...)</label>
-                    <textarea id="shippingAddress" rows="3" required placeholder="Nhập địa chỉ chi tiết..."></textarea>
+                    <label>Địa chỉ giao hàng</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-house" style="top: 15px;"></i>
+                        <textarea id="shippingAddress" rows="3" required placeholder="Số nhà, Tên đường, Phường/Xã, Quận/Huyện, Tỉnh/Thành phố..."></textarea>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Phương thức thanh toán</label>
-                    <select id="paymentMethod" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                        <option value="COD">Thanh toán khi nhận hàng (COD)</option>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-wallet"></i>
+                        <select id="paymentMethod">
+                            <option value="COD">Thanh toán khi nhận hàng (COD)</option>
                         </select>
+                    </div>
                 </div>
-                <button type="submit" class="btn-submit" id="btn-place-order">Xác nhận Đặt hàng</button>
+                <button type="submit" class="btn-submit" id="btn-place-order">
+                    <i class="fa-solid fa-check"></i> Hoàn tất đặt hàng
+                </button>
             </form>
         </div>
 
         <div class="checkout-summary">
-            <h2>Tóm tắt đơn hàng</h2>
+            <h2><i class="fa-solid fa-file-invoice-dollar" style="color: #ee4d2d; margin-right: 8px;"></i>Tóm tắt đơn hàng</h2>
             <div id="order-items-summary">
-        </div>
-            <div class="coupon-section" style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 5px;">
-                <p style="font-weight: bold; margin-bottom: 5px;">Mã giảm giá</p>
-                <div style="display: flex; gap: 5px;">
-                    <input type="text" id="coupon-code" placeholder="Nhập mã (VD: SALE10)" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                    <button type="button" onclick="applyCoupon()" style="padding: 8px 15px; background: #333; color: white; border: none; border-radius: 4px; cursor: pointer;">Áp dụng</button>
                 </div>
-                <p id="coupon-message" style="margin-top: 5px; font-size: 0.9em;"></p>
-             </div>
-            <div style="margin-top: 20px; font-size: 1.2em; font-weight: bold; display: flex; justify-content: space-between; color: #d32f2f;">
-                <span>Tổng cộng:</span>
+            
+            <div class="coupon-section">
+                <p style="font-weight: 600; margin-bottom: 5px; color: #444;">Mã giảm giá</p>
+                <div class="coupon-box">
+                    <input type="text" id="coupon-code" placeholder="Nhập mã (VD: SALE10)">
+                    <button type="button" onclick="applyCoupon()">Áp dụng</button>
+                </div>
+                <div id="coupon-message"></div>
+            </div>
+            
+            <div class="final-price-box">
+                <span>Tổng thanh toán:</span>
                 <span id="final-total">0 đ</span>
             </div>
         </div>
