@@ -3,25 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chi tiết đơn hàng</title>
-    <link rel="stylesheet" href="../../css/style.css"> 
+    <title>Chi tiết đơn hàng - Mini Ecommerce</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="../assets/css/style.css"> 
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f6f9; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
-        .back-btn { text-decoration: none; color: #555; font-weight: bold; display: flex; align-items: center; gap: 5px; }
-        .back-btn:hover { color: #000; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f5f5f5; margin: 0; }
         
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
-        .info-box h4 { margin-top: 0; color: #555; }
-        .info-box p { margin: 5px 0; color: #333; }
+        .breadcrumb { max-width: 900px; margin: 20px auto; padding: 0 20px; color: #555; font-size: 0.9rem; }
+        .breadcrumb a { color: #0056b3; text-decoration: none; }
+
+        .container { max-width: 900px; margin: 0 auto 50px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 20px; margin-bottom: 25px; }
+        .back-btn { text-decoration: none; color: #555; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: color 0.2s; }
+        .back-btn:hover { color: #ee4d2d; }
+        
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 30px; }
+        .info-box { background: #fafafa; padding: 20px; border-radius: 8px; border: 1px solid #eee; }
+        .info-box h4 { margin-top: 0; color: #333; margin-bottom: 15px; font-size: 1.1rem; }
+        .info-box p { margin: 8px 0; color: #555; font-size: 0.95rem; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #f8f9fa; }
-        .total-row td { font-weight: bold; font-size: 1.2em; color: #d32f2f; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; vertical-align: middle;}
+        th { background: #fafafa; color: #555; font-weight: 600; }
+        .total-row td { font-weight: bold; font-size: 1.2rem; border-bottom: none; }
+        .total-row .final-price { color: #ee4d2d; font-size: 1.5rem; }
         
-        .badge { padding: 5px 10px; border-radius: 4px; color: white; font-size: 0.9em; font-weight: bold; }
+        .badge { padding: 8px 15px; border-radius: 6px; color: white; font-size: 1rem; font-weight: 600; display: inline-block; }
         .status-pending { background: #ffc107; color: #333; }
         .status-shipping { background: #17a2b8; }
         .status-completed { background: #28a745; }
@@ -29,111 +38,135 @@
     </style>
 </head>
 <body>
+    <div id="header"></div>
+
+    <div class="breadcrumb">
+        <a href="../home/index.html">Trang chủ</a> <i class="fa-solid fa-angle-right" style="font-size: 0.8em; margin: 0 5px;"></i> 
+        <a href="profile.html">Tài khoản</a> <i class="fa-solid fa-angle-right" style="font-size: 0.8em; margin: 0 5px;"></i> Chi tiết đơn hàng
+    </div>
 
     <div class="container">
         <div class="header">
-            <a href="profile.html" class="back-btn">Quay lại danh sách</a>
-            <h2 style="margin:0">Đơn hàng <span id="orderId">...</span></h2>
+            <a href="profile.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Trở về</a>
+            <h2 style="margin:0; color: #333;">Mã đơn: <span id="orderId" style="color: #ee4d2d;">...</span></h2>
         </div>
 
         <div class="info-grid">
             <div class="info-box">
-                <h4>Địa chỉ nhận hàng</h4>
-                <p id="shippingName">Loading...</p>
-                <p id="shippingAddress">Loading...</p>
-                <p id="shippingPhone">Loading...</p>
+                <h4><i class="fa-solid fa-location-dot" style="color: #ee4d2d; margin-right: 8px;"></i>Địa chỉ nhận hàng</h4>
+                <p><strong>Người nhận:</strong> <span id="shippingName">Đang tải...</span></p>
+                <p><strong>Điện thoại:</strong> <span id="shippingPhone">...</span></p>
+                <p><strong>Địa chỉ:</strong> <span id="shippingAddress">...</span></p>
             </div>
             <div class="info-box">
-                <h4>Thông tin thanh toán</h4>
-                <p>Phương thức: <strong id="paymentMethod">...</strong></p>
-                <p>Trạng thái: <span id="payStatus">...</span></p>
-                <p>Ngày đặt: <span id="orderDate">...</span></p>
+                <h4><i class="fa-solid fa-circle-info" style="color: #ee4d2d; margin-right: 8px;"></i>Thông tin đơn hàng</h4>
+                <p><strong>Ngày đặt:</strong> <span id="orderDate">...</span></p>
+                <p><strong>Thanh toán:</strong> <span id="paymentMethod">...</span></p>
+                <p><strong>Trạng thái TT:</strong> <span id="payStatus">...</span></p>
             </div>
         </div>
 
-        <h3 style="border-top: 1px solid #eee; padding-top: 20px;">📦 Sản phẩm đã mua</h3>
+        <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px;"><i class="fa-solid fa-box-open"></i> Sản phẩm đã mua</h3>
         <table>
             <thead>
                 <tr>
                     <th>Sản phẩm</th>
                     <th>Đơn giá</th>
-                    <th>Số lượng</th>
-                    <th>Tạm tính</th>
+                    <th style="text-align: center;">Số lượng</th>
+                    <th style="text-align: right;">Tạm tính</th>
                 </tr>
             </thead>
             <tbody id="orderItems">
-                </tbody>
+                <tr><td colspan="4" style="text-align: center;">Đang tải...</td></tr>
+            </tbody>
             <tfoot>
                 <tr class="total-row">
-                    <td colspan="3" style="text-align: right;">Tổng cộng:</td>
-                    <td id="totalPrice">...</td>
+                    <td colspan="3" style="text-align: right;">Tổng thanh toán:</td>
+                    <td id="totalPrice" class="final-price" style="text-align: right;">...</td>
                 </tr>
             </tfoot>
         </table>
         
-        <div style="margin-top: 30px; text-align: right;">
-            Trạng thái đơn hàng: <span id="orderStatus" class="badge">...</span>
+        <div style="margin-top: 30px; text-align: right; background: #fafafa; padding: 20px; border-radius: 8px; border: 1px solid #eee;">
+            <span style="font-size: 1.1rem; font-weight: 600; margin-right: 15px;">Trạng thái hiện tại:</span> 
+            <span id="orderStatus" class="badge">...</span>
         </div>
     </div>
 
+    <div id="footer"></div>
+
+    <script src="../utils.js"></script>
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const orderId = urlParams.get('id');
-        const token = localStorage.getItem('token');
+        document.addEventListener('DOMContentLoaded', () => {
+            fetch('../layouts/header.html').then(r => r.text()).then(h => {
+                document.getElementById('header').innerHTML = h;
+                if(typeof checkLoginState === 'function') checkLoginState();
+            });
+            fetch('../layouts/footer.html').then(r => r.text()).then(h => {
+                document.getElementById('footer').innerHTML = h;
+            });
 
-        if (!token) window.location.href = '../login.html';
-        if (!orderId) { alert("Không tìm thấy mã đơn hàng"); window.location.href = 'profile.html'; }
+            const urlParams = new URLSearchParams(window.location.search);
+            const orderId = urlParams.get('id');
+            const token = localStorage.getItem('token');
 
-        async function fetchOrderDetail() {
-            try {
-                const res = await fetch(`http://localhost:5000/api/orders/${orderId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const order = await res.json();
-
-                if (!res.ok) throw new Error(order.message);
-
-                document.getElementById('orderId').innerText = '#' + order._id.slice(-6).toUpperCase();
-                document.getElementById('orderDate').innerText = new Date(order.createdAt).toLocaleString('vi-VN');
-                
-                document.getElementById('shippingName').innerText = order.customerName || order.user.name;
-                document.getElementById('shippingAddress').innerText = order.address || (order.shippingAddress ? order.shippingAddress.address : 'N/A');
-                document.getElementById('shippingPhone').innerText = order.phone || (order.shippingAddress ? order.shippingAddress.phone : 'N/A');
-
-                document.getElementById('paymentMethod').innerText = order.paymentMethod;
-                const isPaid = order.isPaid;
-                document.getElementById('payStatus').innerHTML = isPaid 
-                    ? '<span style="color:green; font-weight:bold;">Đã thanh toán</span>' 
-                    : '<span style="color:red; font-weight:bold;">Chưa thanh toán</span>';
-
-                const statusEl = document.getElementById('orderStatus');
-                statusEl.innerText = order.status;
-                if (order.status === 'Hoàn thành') statusEl.className = 'badge status-completed';
-                else if (order.status === 'Đã hủy') statusEl.className = 'badge status-cancelled';
-                else if (order.status === 'Đang vận chuyển') statusEl.className = 'badge status-shipping';
-                else statusEl.className = 'badge status-pending';
-
-                const itemsHtml = order.orderItems.map(item => `
-                    <tr>
-                        <td style="display:flex; align-items:center; gap:10px;">
-                            <img src="${item.image}" width="50" style="border-radius:4px;">
-                            <span>${item.name}</span>
-                        </td>
-                        <td>${item.price.toLocaleString('vi-VN')}₫</td>
-                        <td>x${item.qty}</td>
-                        <td style="font-weight:bold;">${(item.price * item.qty).toLocaleString('vi-VN')}₫</td>
-                    </tr>
-                `).join('');
-                document.getElementById('orderItems').innerHTML = itemsHtml;
-
-                document.getElementById('totalPrice').innerText = order.totalPrice.toLocaleString('vi-VN') + '₫';
-
-            } catch (error) {
-                alert("Lỗi tải đơn hàng: " + error.message);
+            if (!token) window.location.href = '../auth/login.html';
+            if (!orderId) { 
+                Swal.fire('Lỗi', 'Không tìm thấy mã đơn hàng', 'error').then(() => window.location.href = 'profile.html'); 
+                return;
             }
-        }
 
-        fetchOrderDetail();
+            async function fetchOrderDetail() {
+                try {
+                    const res = await fetch(`http://localhost:5000/api/orders/${orderId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const order = await res.json();
+
+                    if (!res.ok) throw new Error(order.message);
+
+                    document.getElementById('orderId').innerText = '#' + order._id.slice(-6).toUpperCase();
+                    document.getElementById('orderDate').innerText = new Date(order.createdAt).toLocaleString('vi-VN');
+                    
+                    document.getElementById('shippingName').innerText = order.customerName || (order.user && order.user.name) || 'N/A';
+                    document.getElementById('shippingAddress').innerText = order.address || (order.shippingAddress ? order.shippingAddress.address : 'N/A');
+                    document.getElementById('shippingPhone').innerText = order.phone || (order.shippingAddress ? order.shippingAddress.phone : 'N/A');
+
+                    document.getElementById('paymentMethod').innerText = order.paymentMethod;
+                    const isPaid = order.isPaid;
+                    document.getElementById('payStatus').innerHTML = isPaid 
+                        ? '<span style="color:#28a745; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> Đã thanh toán</span>' 
+                        : '<span style="color:#dc3545; font-weight:bold;"><i class="fa-solid fa-clock"></i> Chưa thanh toán</span>';
+
+                    const statusEl = document.getElementById('orderStatus');
+                    statusEl.innerText = order.status;
+                    if (order.status === 'Hoàn thành') statusEl.className = 'badge status-completed';
+                    else if (order.status === 'Đã hủy' || order.status === 'Trả hàng') statusEl.className = 'badge status-cancelled';
+                    else if (order.status === 'Đang vận chuyển' || order.status === 'Đang đóng gói') statusEl.className = 'badge status-shipping';
+                    else statusEl.className = 'badge status-pending';
+
+                    const itemsHtml = order.orderItems.map(item => `
+                        <tr>
+                            <td style="display:flex; align-items:center; gap:15px;">
+                                <img src="${item.image}" width="60" style="border-radius:6px; border: 1px solid #eee;">
+                                <span style="font-weight: 500; color: #333;">${item.name}</span>
+                            </td>
+                            <td>${Number(item.price).toLocaleString('vi-VN')} đ</td>
+                            <td style="text-align: center;">${item.qty}</td>
+                            <td style="font-weight:bold; color: #333; text-align: right;">${(item.price * item.qty).toLocaleString('vi-VN')} đ</td>
+                        </tr>
+                    `).join('');
+                    document.getElementById('orderItems').innerHTML = itemsHtml;
+
+                    document.getElementById('totalPrice').innerText = Number(order.totalPrice).toLocaleString('vi-VN') + ' đ';
+
+                } catch (error) {
+                    Swal.fire('Lỗi', "Lỗi tải đơn hàng: " + error.message, 'error');
+                }
+            }
+
+            fetchOrderDetail();
+        });
     </script>
 </body>
 </html>

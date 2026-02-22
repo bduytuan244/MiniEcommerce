@@ -3,8 +3,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const userStr = localStorage.getItem('user');
 
     if (!token || !userStr) {
-        alert("Vui lòng đăng nhập để xem hồ sơ!");
-        window.location.href = '../auth/login.html';
+        Swal.fire({
+            title: 'Chưa đăng nhập',
+            text: 'Vui lòng đăng nhập để xem thông tin tài khoản!',
+            icon: 'warning',
+            confirmButtonText: 'Đăng nhập ngay',
+            allowOutsideClick: false
+        }).then(() => {
+            window.location.href = '../auth/login.html';
+        });
         return;
     }
 
@@ -44,7 +51,13 @@ async function loadMyOrders() {
         }
 
         if (orders.length === 0) {
-            orderListEl.innerHTML = `<tr><td colspan="5" style="text-align:center">Bạn chưa có đơn hàng nào. <a href="../home/index.html">Mua ngay!</a></td></tr>`;
+            orderListEl.innerHTML = `
+                <tr><td colspan="5" style="text-align:center; padding: 40px 0; color: #777;">
+                    <i class="fa-solid fa-receipt" style="font-size: 3rem; color: #ddd; margin-bottom: 15px; display: block;"></i>
+                    Bạn chưa có đơn hàng nào. <br><br>
+                    <a href="../home/index.html" style="background: #ee4d2d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Mua sắm ngay</a>
+                </td></tr>
+            `;
             return;
         }
 
@@ -65,12 +78,12 @@ async function loadMyOrders() {
 
             return `
                 <tr>
-                    <td>#${order._id.substring(order._id.length - 6).toUpperCase()}</td>
+                    <td class="order-id">#${order._id.substring(order._id.length - 6).toUpperCase()}</td>
                     <td>${date}</td>
-                    <td style="color:#d32f2f; font-weight:bold">${total}</td>
-                    <td><span class="badge ${badgeClass}">${status}</span></td>
-                    <td>
-                        <button onclick="viewOrderDetail('${order._id}')" style="cursor:pointer; color:blue; border:none; background:none; text-decoration:underline;">Xem</button>
+                    <td class="order-total">${total}</td>
+                    <td style="text-align: center;"><span class="badge ${badgeClass}">${status}</span></td>
+                    <td style="text-align: center;">
+                        <a href="order-detail.html?id=${order._id}" class="btn-view">Chi tiết</a>
                     </td>
                 </tr>
             `;
@@ -82,17 +95,22 @@ async function loadMyOrders() {
     }
 }
 
-function viewOrderDetail(id) {
-    window.location.href = `order-detail.html?id=${id}`;
-}
-
-function logout() {
-    if(confirm("Bạn muốn đăng xuất?")) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        
-        localStorage.removeItem('adminToken'); 
-        
-        window.location.href = '../auth/login.html';
-    }
+function confirmLogout() {
+    Swal.fire({
+        title: 'Đăng xuất?',
+        text: "Bạn có chắc chắn muốn thoát tài khoản không?",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Đăng xuất',
+        cancelButtonText: 'Hủy'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('adminToken'); 
+            window.location.href = '../auth/login.html';
+        }
+    });
 }
