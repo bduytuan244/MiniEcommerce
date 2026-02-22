@@ -1,4 +1,3 @@
-// --- 1. KHAI BÁO BIẾN TOÀN CỤC (Lưu trạng thái lọc) ---
 let currentPage = 1;
 let currentKeyword = '';
 let currentSort = '-createdAt';
@@ -26,15 +25,13 @@ async function loadProducts() {
     const productList = document.getElementById('product-list');
     const paginationEl = document.getElementById('pagination');
 
-    productList.innerHTML = '<p style="width:100%; text-align:center">⏳ Đang tải dữ liệu...</p>';
+    productList.innerHTML = '<p style="width:100%; text-align:center; color:#666;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải dữ liệu...</p>';
 
     try {
         let url = `http://localhost:5000/api/products?page=${currentPage}&limit=8&sort=${currentSort}`;
 
         if (currentKeyword) url += `&keyword=${currentKeyword}`;
-
         if (currentBrand) url += `&brand=${currentBrand}`;
-
         if (currentMinPrice) url += `&price[gte]=${currentMinPrice}`;
         if (currentMaxPrice) url += `&price[lte]=${currentMaxPrice}`;
 
@@ -45,13 +42,13 @@ async function loadProducts() {
             renderProducts(data.products);
             renderPagination(data.totalPages, data.currentPage);
         } else {
-            productList.innerHTML = '<p style="width:100%; text-align:center">Không tìm thấy sản phẩm nào phù hợp.</p>';
+            productList.innerHTML = '<p style="width:100%; text-align:center; color:#888;">Không tìm thấy sản phẩm nào phù hợp.</p>';
             paginationEl.innerHTML = ''; 
         }
 
     } catch (error) {
         console.error('Lỗi tải sản phẩm:', error);
-        productList.innerHTML = '<p style="color:red; text-align:center">Lỗi kết nối Server!</p>';
+        productList.innerHTML = '<p style="width:100%; color:red; text-align:center"><i class="fa-solid fa-triangle-exclamation"></i> Lỗi kết nối Server!</p>';
     }
 }
 
@@ -66,20 +63,13 @@ function renderProducts(products) {
         const price = Number(product.price).toLocaleString('vi-VN');
 
         return `
-            <div class="product-card">
+            <div class="product-card" onclick="window.location.href='product-detail.html?id=${product._id}'">
                 <img src="${imageUrl}" alt="${product.name}">
-                <h3 style="height: 40px; overflow: hidden; margin-top: 10px;">${product.name}</h3>
+                <h3>${product.name}</h3>
                 <p class="price">${price} đ</p>
-                
-                <div class="action-buttons">
-                    <a href="product-detail.html?id=${product._id}" class="btn-filter" style="text-decoration: none; font-size: 0.9em; padding: 8px 12px;">
-                        Xem
-                    </a>
-                    
-                    <button class="btn-filter" style="background: #28a745;" onclick="addToCart('${product._id}')">
-                        + Giỏ
-                    </button>
-                </div>
+                <button class="btn-filter" style="width: 100%; margin-top: 10px; background: #ee4d2d;" onclick="event.stopPropagation(); addToCart('${product._id}')">
+                    <i class="fa-solid fa-cart-plus"></i> Thêm vào giỏ
+                </button>
             </div>
         `;
     }).join('');
@@ -90,16 +80,16 @@ function renderPagination(totalPages, page) {
     let html = '';
 
     if (page > 1) {
-        html += `<button onclick="changePage(${page - 1})">« Trước</button>`;
+        html += `<button onclick="changePage(${page - 1})"><i class="fa-solid fa-chevron-left"></i> Trước</button>`;
     }
 
     for (let i = 1; i <= totalPages; i++) {
-        const activeStyle = i === page ? 'background:#007bff; color:white; border-color:#007bff;' : '';
-        html += `<button onclick="changePage(${i})" style="${activeStyle}">${i}</button>`;
+        const activeClass = i === page ? 'active' : '';
+        html += `<button class="${activeClass}" onclick="changePage(${i})">${i}</button>`;
     }
 
     if (page < totalPages) {
-        html += `<button onclick="changePage(${page + 1})">Sau »</button>`;
+        html += `<button onclick="changePage(${page + 1})">Sau <i class="fa-solid fa-chevron-right"></i></button>`;
     }
 
     paginationEl.innerHTML = html;
@@ -127,7 +117,7 @@ function applyFilters() {
 function changePage(page) {
     currentPage = page;
     loadProducts();
-    document.getElementById('header').scrollIntoView({ behavior: 'smooth' });
+    document.querySelector('.section-title').scrollIntoView({ behavior: 'smooth' });
 }
 
 function addToCart(productId) {
@@ -141,5 +131,14 @@ function addToCart(productId) {
     }
 
     localStorage.setItem('cart', JSON.stringify(cart));
-    alert('Đã thêm sản phẩm vào giỏ hàng!');
+    
+    if (typeof updateCartBadge === 'function') updateCartBadge();
+
+    Swal.fire({
+        title: 'Thành công!',
+        text: 'Đã thêm sản phẩm vào giỏ hàng',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+    });
 }
