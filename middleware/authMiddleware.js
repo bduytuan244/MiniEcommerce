@@ -34,4 +34,12 @@ const verifyAdmin = (req, res, next) => {
     }
 };
 
-module.exports = { verifyToken, verifyAdmin };
+const verifySeller = (req, res, next) => {
+    if (req.user && req.user.isSeller) {
+        next();
+    } else {
+        res.status(403).json({ message: "Không có quyền truy cập! Tính năng này chỉ dành cho Người bán (Seller)." });
+    }
+};
+
+module.exports = { verifyToken, verifyAdmin, verifySeller };

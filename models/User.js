@@ -29,8 +29,12 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  isSeller: {
+    type: Boolean,
+    default: false
+  },
   isVerified: { type: Boolean, default: false },
-  otp: { type: String },
+  otp: { type: String },  
   otpExpire: { type: Date },
   refreshToken: { type: String }
 }, { timestamps: true });

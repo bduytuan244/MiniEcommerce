@@ -17,7 +17,13 @@ const productSchema = new mongoose.Schema({
 
   brand: { type: String, required: true },
   
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  
+  seller_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true 
+  },
 }, { timestamps: true }); 
 
 module.exports = mongoose.model('Product', productSchema);
