@@ -114,3 +114,48 @@ function confirmLogout() {
         }
     });
 }
+
+document.getElementById('btn-become-seller').addEventListener('click', async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        Swal.fire('Lỗi', 'Vui lòng đăng nhập trước!', 'error');
+        return;
+    }
+
+    Swal.fire({
+        title: 'Mở Kênh Người Bán?',
+        text: "Bạn sẽ được cấp quyền để đăng tải và bán sản phẩm trên hệ thống.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#ee4d2d',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Đồng ý mở Shop'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                const res = await fetch('http://localhost:5000/api/users/become-seller', {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    }
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    Swal.fire('Thành công!', 'Chào mừng bạn đến với Kênh Người Bán.', 'success')
+                    .then(() => {
+                        window.location.href = '../seller/index.html';
+                    });
+                } else {
+                    Swal.fire('Lỗi', data.message, 'error');
+                }
+            } catch (error) {
+                Swal.fire('Lỗi', 'Không kết nối được với máy chủ', 'error');
+            }
+        }
+    });
+});

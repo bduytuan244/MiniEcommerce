@@ -111,3 +111,30 @@ exports.toggleLockUser = async (req, res) => {
         res.status(500).json({ message: "Lỗi server: " + error.message });
     }
 };
+
+exports.becomeSeller = async (req, res) => {
+    try {
+        const userId = req.user._id || req.user.id; 
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "Không tìm thấy người dùng" });
+        }
+
+        if (user.isSeller) {
+            return res.status(400).json({ message: "Tài khoản của bạn đã là Người bán rồi!" });
+        }
+        user.isSeller = true;
+        await user.save();
+
+        user.password = undefined; 
+        
+        res.status(200).json({ 
+            message: "Đăng ký Kênh Người Bán thành công!", 
+            user 
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Lỗi Server" });
+    }
+};
