@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kênh Người Bán - Seller Center</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { margin: 0; font-family: 'Inter', sans-serif; display: flex; height: 100vh; background: #f4f6f9; }
+        
+        .sidebar { width: 250px; background: #fff; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; z-index: 10;}
+        .sidebar h2 { text-align: center; padding: 20px 0; margin: 0; color: #ee4d2d; font-size: 1.3rem; letter-spacing: 1px; border-bottom: 1px solid #eee;}
+        .menu { list-style: none; padding: 0; margin: 0; flex: 1; }
+        .menu a { display: flex; align-items: center; gap: 10px; padding: 15px 20px; color: #555; text-decoration: none; transition: 0.2s; font-weight: 500;}
+        .menu a:hover, .menu a.active { background: #fff1ee; color: #ee4d2d; border-right: 4px solid #ee4d2d; }
+        .logout-btn { padding: 15px; background: #f8f9fa; color: #dc3545; text-align: center; cursor: pointer; transition: 0.2s; border-top: 1px solid #eee; font-weight: 600;}
+        .logout-btn:hover { background: #ffebee; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .topbar { background: white; padding: 15px 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; z-index: 5;}
+        .content { padding: 30px; overflow-y: auto; flex: 1; }
+        
+        .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: white; padding: 25px 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center; border: 1px solid #eee; }
+        .card h3 { margin: 0; color: #666; font-size: 1.1rem; font-weight: 600; }
+        .card p { margin: 15px 0 0; font-size: 2.5rem; font-weight: 700; color: #ee4d2d; }
+        
+        .welcome-box { background: linear-gradient(135deg, #ff7337 0%, #ee4d2d 100%); color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(238,77,45,0.2); }
+        .welcome-box h3 { margin-top: 0; font-size: 1.5rem; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2><i class="fa-solid fa-store"></i> SELLER CENTER</h2>
+        <ul class="menu">
+            <li><a href="index.html" class="active"><i class="fa-solid fa-chart-line"></i> Bảng điều khiển</a></li>
+            <li><a href="products.html"><i class="fa-solid fa-box"></i> Kho sản phẩm</a></li> 
+            <li><a href="orders.html"><i class="fa-solid fa-clipboard-list"></i> Đơn hàng của tôi</a></li>
+        </ul>
+        <div class="logout-btn" onclick="sellerLogout()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</div>
+    </div>
+
+    <div class="main-content">
+        <div class="topbar">
+            <h3 style="margin: 0; color: #555;">Tổng quan Cửa hàng</h3>
+            <div style="font-weight: 600; color: #333;"><i class="fa-solid fa-shop" style="color: #ee4d2d; margin-right: 5px;"></i> Shop: <strong id="seller-name">...</strong></div>
+        </div>
+
+        <div class="content">
+            <div class="stat-cards">
+                <div class="card">
+                    <h3><i class="fa-solid fa-boxes-stacked"></i> Sản phẩm đang bán</h3>
+                    <p id="total-products"><i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem;"></i></p>
+                </div>
+                <div class="card">
+                    <h3><i class="fa-solid fa-bag-shopping"></i> Đơn hàng nhận được</h3>
+                    <p id="total-orders"><i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem;"></i></p>
+                </div>
+            </div>
+
+            <div class="welcome-box">
+                <h3>Chào mừng đến với Kênh Người Bán!</h3>
+                <p style="line-height: 1.6;">Tại đây, bạn có toàn quyền quản lý cửa hàng của mình. Hãy bắt đầu đăng tải sản phẩm mới để tiếp cận hàng ngàn khách hàng trên hệ thống Mini Ecommerce nhé.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+            const userStr = localStorage.getItem('user');
+
+            if (!token || !userStr) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            const user = JSON.parse(userStr);
+            if (!user.isSeller && !user.isAdmin) {
+                Swal.fire('Từ chối', 'Bạn chưa đăng ký quyền Người bán (Seller)!', 'error')
+                .then(() => window.location.href = '../home/index.html');
+                return;
+            }
+
+            document.getElementById('seller-name').innerText = user.name;
+            loadDashboardData(token);
+        });
+
+        async function loadDashboardData(token) {
+            try {
+                const resProd = await fetch('http://localhost:5000/api/products/myshop', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const dataProd = await resProd.json();
+                document.getElementById('total-products').innerText = dataProd.products ? dataProd.products.length : 0;
+
+                const resOrder = await fetch('http://localhost:5000/api/orders/myshop', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const dataOrder = await resOrder.json();
+                document.getElementById('total-orders').innerText = dataOrder.length || 0;
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById('total-products').innerText = 'Lỗi';
+                document.getElementById('total-orders').innerText = 'Lỗi';
+            }
+        }
+
+        function sellerLogout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '../auth/login.html';
+        }
+    </script>
+</body>
+</html>
