@@ -71,11 +71,15 @@
                     localStorage.setItem('refreshToken', data.refreshToken);
                     localStorage.setItem('user', JSON.stringify(data.user)); 
 
-                    if(data.user.isAdmin) {
+                    if (data.user.isAdmin) {
                         localStorage.setItem('adminToken', data.accessToken);
                         localStorage.setItem('adminUser', JSON.stringify(data.user));
                         window.location.href = '../admin/index.html'; 
-                    } else {
+                    } 
+                    else if (data.user.isSeller) {
+                        window.location.href = '../seller/index.html';
+                    } 
+                    else {
                         window.location.href = '../home/index.html';
                     }
                 } else {
