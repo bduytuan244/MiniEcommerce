@@ -117,7 +117,7 @@ exports.login = async (req, res) => {
       message: "Đăng nhập thành công",
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      user: { id: user._id, name: user.name, email: user.email, isAdmin: user.isAdmin }
+      user: { id: user._id, name: user.name, email: user.email, isAdmin: user.isAdmin, isSeller: user.isSeller }
     });
 
   } catch (error) {
