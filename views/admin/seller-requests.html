@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duyệt Người Bán - Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { margin: 0; font-family: 'Inter', sans-serif; display: flex; height: 100vh; background: #f4f6f9; }
+        
+        .sidebar { width: 250px; background: #212529; color: white; display: flex; flex-direction: column; z-index: 10;}
+        .sidebar h2 { text-align: center; padding: 20px 0; margin: 0; font-size: 1.3rem; border-bottom: 1px solid #343a40; letter-spacing: 1px;}
+        .menu { list-style: none; padding: 0; margin: 0; flex: 1; }
+        .menu a { display: flex; align-items: center; gap: 10px; padding: 15px 20px; color: #adb5bd; text-decoration: none; transition: 0.2s; font-weight: 500;}
+        .menu a:hover, .menu a.active { background: #343a40; color: white; border-left: 4px solid #0d6efd; }
+        .logout-btn { padding: 15px; background: #1a1d20; color: #dc3545; text-align: center; cursor: pointer; border-top: 1px solid #343a40; font-weight: 600;}
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .topbar { background: white; padding: 15px 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;}
+        .content { padding: 30px; overflow-y: auto; flex: 1; }
+
+        .table-container { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 15px 20px; text-align: left; border-bottom: 1px solid #eee; vertical-align: middle; }
+        th { background: #f8f9fa; color: #495057; text-transform: uppercase; font-size: 0.85rem; font-weight: 600;}
+        
+        .badge-pending { background: #fff3cd; color: #856404; padding: 5px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;}
+        
+        .btn-action { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; color: white; margin-right: 5px; font-weight: 600; font-size: 0.85rem; transition: 0.2s;}
+        .btn-approve { background: #198754; }
+        .btn-approve:hover { background: #157347; }
+        .btn-reject { background: #dc3545; }
+        .btn-reject:hover { background: #bb2d3b; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2><i class="fa-solid fa-user-shield"></i> ADMIN PANEL</h2>
+        <ul class="menu">
+            <li><a href="index.html"><i class="fa-solid fa-chart-pie"></i> Thống kê</a></li>
+            <li><a href="users.html"><i class="fa-solid fa-users"></i> Quản lý Users</a></li>
+            <li><a href="seller-requests.html" class="active"><i class="fa-solid fa-store"></i> Duyệt Người Bán</a></li>
+        </ul>
+        <div class="logout-btn" onclick="adminLogout()">Đăng xuất</div>
+    </div>
+
+    <div class="main-content">
+        <div class="topbar">
+            <h3 style="margin: 0; color: #333;">Yêu cầu mở Shop</h3>
+            <div style="font-weight: 600; color: #0d6efd;"><i class="fa-solid fa-user-tie"></i> Quản trị viên</div>
+        </div>
+
+        <div class="content">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tên Khách hàng</th>
+                            <th>Email</th>
+                            <th>Ngày yêu cầu</th>
+                            <th>Trạng thái</th>
+                            <th style="text-align: center;">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requests-table-body">
+                        <tr><td colspan="5" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải dữ liệu...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const adminToken = localStorage.getItem('adminToken');
+        if (!adminToken) window.location.href = '../auth/login.html';
+
+        async function loadRequests() {
+            try {
+                const res = await fetch('http://localhost:5000/api/users/seller-requests', {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                
+                const users = await res.json();
+                const tbody = document.getElementById('requests-table-body');
+
+                if (users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: #6c757d;">Hiện không có yêu cầu mở Shop nào đang chờ duyệt.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = users.map(user => `
+                    <tr>
+                        <td style="font-weight: 600; color: #333;">${user.name}</td>
+                        <td>${user.email}</td>
+                        <td>${new Date(user.updatedAt || user.createdAt).toLocaleDateString('vi-VN')}</td>
+                        <td><span class="badge-pending">Chờ duyệt</span></td>
+                        <td style="text-align: center;">
+                            <button class="btn-action btn-approve" onclick="handleRequest('${user._id}', 'approved', '${user.name}')"><i class="fa-solid fa-check"></i> Duyệt</button>
+                            <button class="btn-action btn-reject" onclick="handleRequest('${user._id}', 'rejected', '${user.name}')"><i class="fa-solid fa-xmark"></i> Từ chối</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Lỗi', 'Không thể tải danh sách yêu cầu', 'error');
+            }
+        }
+
+        async function handleRequest(userId, status, userName) {
+            const actionText = status === 'approved' ? 'duyệt' : 'từ chối';
+            const actionColor = status === 'approved' ? '#198754' : '#dc3545';
+
+            const result = await Swal.fire({
+                title: `Xác nhận ${actionText}?`,
+                text: `Bạn có chắc chắn muốn ${actionText} yêu cầu mở Shop của ${userName}?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: actionColor,
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: `Đồng ý ${actionText}`
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch(`http://localhost:5000/api/users/seller-requests/${userId}`, {
+                        method: 'PUT',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${adminToken}` 
+                        },
+                        body: JSON.stringify({ status })
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok) {
+                        Swal.fire('Thành công', data.message, 'success');
+                        loadRequests();
+                    } else {
+                        Swal.fire('Lỗi', data.message, 'error');
+                    }
+                } catch (error) {
+                    Swal.fire('Lỗi', 'Lỗi kết nối Server', 'error');
+                }
+            }
+        }
+
+        function adminLogout() {
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminUser');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '../auth/login.html';
+        }
+
+        loadRequests();
+    </script>
+</body>
+</html>
