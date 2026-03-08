@@ -114,48 +114,75 @@ function confirmLogout() {
         }
     });
 }
+document.addEventListener('DOMContentLoaded', () => {
+    const btnBecomeSeller = document.getElementById('btn-become-seller');
+    const userStr = localStorage.getItem('user');
+    
+    if (btnBecomeSeller && userStr) {
+        const user = JSON.parse(userStr);
 
-document.getElementById('btn-become-seller').addEventListener('click', async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        Swal.fire('Lỗi', 'Vui lòng đăng nhập trước!', 'error');
-        return;
-    }
-
-    Swal.fire({
-        title: 'Mở Kênh Người Bán?',
-        text: "Bạn sẽ được cấp quyền để đăng tải và bán sản phẩm trên hệ thống.",
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#ee4d2d',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Đồng ý mở Shop'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            try {
-                const res = await fetch('http://localhost:5000/api/users/become-seller', {
-                    method: 'PUT',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}` 
-                    }
-                });
-
-                const data = await res.json();
-
-                if (res.ok) {
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    
-                    Swal.fire('Thành công!', 'Chào mừng bạn đến với Kênh Người Bán.', 'success')
-                    .then(() => {
-                        window.location.href = '../seller/index.html';
-                    });
-                } else {
-                    Swal.fire('Lỗi', data.message, 'error');
-                }
-            } catch (error) {
-                Swal.fire('Lỗi', 'Không kết nối được với máy chủ', 'error');
-            }
+        if (user.isSeller || user.sellerStatus === 'approved') {
+            btnBecomeSeller.style.display = 'none'; 
+        } else if (user.sellerStatus === 'pending') {
+            btnBecomeSeller.innerText = 'Đang chờ Admin duyệt...';
+            btnBecomeSeller.disabled = true;
+            btnBecomeSeller.style.backgroundColor = '#6c757d'; 
+            btnBecomeSeller.style.cursor = 'not-allowed';
         }
-    });
+
+        btnBecomeSeller.addEventListener('click', async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                Swal.fire('Lỗi', 'Vui lòng đăng nhập trước!', 'error');
+                return;
+            }
+
+            const result = await Swal.fire({
+                title: 'Đăng ký Bán hàng?',
+                text: "Yêu cầu của bạn sẽ được gửi đến Admin để xét duyệt.",
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#ee4d2d',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Gửi yêu cầu'
+            });
+
+            if (result.isConfirmed) {
+                const originalText = btnBecomeSeller.innerText;
+                btnBecomeSeller.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
+                btnBecomeSeller.disabled = true;
+
+                try {
+                    const res = await fetch('http://localhost:5000/api/users/request-seller', {
+                        method: 'POST', 
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}` 
+                        }
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok) {
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        
+                        Swal.fire('Thành công!', data.message, 'success');
+                        
+                        btnBecomeSeller.innerText = 'Đang chờ Admin duyệt...';
+                        btnBecomeSeller.style.backgroundColor = '#6c757d';
+                        btnBecomeSeller.style.cursor = 'not-allowed';
+                        btnBecomeSeller.disabled = true;
+                    } else {
+                        Swal.fire('Lỗi', data.message, 'error');
+                        btnBecomeSeller.innerText = originalText;
+                        btnBecomeSeller.disabled = false;
+                    }
+                } catch (error) {
+                    Swal.fire('Lỗi', 'Không kết nối được với máy chủ', 'error');
+                    btnBecomeSeller.innerText = originalText;
+                    btnBecomeSeller.disabled = false;
+                }
+            }
+        });
+    }
 });
