@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đơn hàng - Seller</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { margin: 0; font-family: 'Inter', sans-serif; display: flex; height: 100vh; background: #f4f6f9; }
+        
+        .sidebar { width: 250px; background: #fff; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; z-index: 10;}
+        .sidebar h2 { text-align: center; padding: 20px 0; margin: 0; color: #ee4d2d; font-size: 1.3rem; border-bottom: 1px solid #eee;}
+        .menu { list-style: none; padding: 0; margin: 0; flex: 1; }
+        .menu a { display: flex; align-items: center; gap: 10px; padding: 15px 20px; color: #555; text-decoration: none; font-weight: 500;}
+        .menu a.active { background: #fff1ee; color: #ee4d2d; border-right: 4px solid #ee4d2d; }
+        .logout-btn { padding: 15px; background: #f8f9fa; color: #dc3545; text-align: center; cursor: pointer; border-top: 1px solid #eee;}
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .topbar { background: white; padding: 15px 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .content { padding: 30px; overflow-y: auto; flex: 1; }
+
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; vertical-align: middle; }
+        th { background: #f8f9fa; color: #555; text-transform: uppercase; font-size: 0.85rem; }
+        
+        .badge { padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; display: inline-block;}
+        .bg-pending { background: #fff3cd; color: #856404; }
+        .bg-delivered { background: #d4edda; color: #155724; }
+        .bg-cancelled { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2><i class="fa-solid fa-store"></i> SELLER CENTER</h2>
+        <ul class="menu">
+            <li><a href="index.html"><i class="fa-solid fa-chart-line"></i> Bảng điều khiển</a></li>
+            <li><a href="products.html"><i class="fa-solid fa-box"></i> Kho sản phẩm</a></li> 
+            <li><a href="orders.html" class="active"><i class="fa-solid fa-clipboard-list"></i> Đơn hàng của tôi</a></li>
+        </ul>
+        <div class="logout-btn" onclick="sellerLogout()">Đăng xuất</div>
+    </div>
+
+    <div class="main-content">
+        <div class="topbar"><h3 style="margin: 0; color: #555;">Quản lý Đơn hàng</h3></div>
+
+        <div class="content">
+            <h2 style="margin-top: 0;">Đơn hàng chờ xử lý</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mã Đơn</th>
+                        <th>Người mua</th>
+                        <th>Ngày đặt</th>
+                        <th style="text-align: center;">Trạng thái chung</th>
+                        <th style="text-align: center;">Thông tin</th>
+                    </tr>
+                </thead>
+                <tbody id="order-table-body">
+                    <tr><td colspan="5" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = '../auth/login.html';
+
+        async function loadSellerOrders() {
+            try {
+                const res = await fetch('http://localhost:5000/api/orders/myshop', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                const tbody = document.getElementById('order-table-body');
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Shop chưa có đơn hàng nào.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.map(order => {
+                    let badgeClass = 'bg-pending';
+                    const status = order.status || 'Chờ xác nhận';
+                    if (status === 'Hoàn thành') badgeClass = 'bg-delivered';
+                    if (status === 'Đã hủy') badgeClass = 'bg-cancelled';
+
+                    return `
+                        <tr>
+                            <td style="font-weight:bold; color:#0056b3;">#${order._id.slice(-6).toUpperCase()}</td>
+                            <td>
+                                <div>${order.customerName || (order.user ? order.user.name : 'Khách')}</div>
+                                <small style="color:#888">${order.phone || ''}</small>
+                            </td>
+                            <td>${new Date(order.createdAt).toLocaleDateString('vi-VN')}</td>
+                            <td style="text-align: center;"><span class="badge ${badgeClass}">${status}</span></td>
+                            <td style="text-align: center;">
+                                <button onclick="Swal.fire('Chi tiết', 'Vui lòng chuẩn bị hàng và giao cho vận chuyển.', 'info')" 
+                                    style="padding: 6px 12px; background: #ee4d2d; color: white; border: none; border-radius: 4px; cursor:pointer;">
+                                    Chuẩn bị hàng
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                Swal.fire('Lỗi', 'Không thể tải đơn hàng!', 'error');
+            }
+        }
+
+        function sellerLogout() { localStorage.removeItem('token'); window.location.href = '../auth/login.html'; }
+        loadSellerOrders();
+    </script>
+</body>
+</html>

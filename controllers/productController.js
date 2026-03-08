@@ -1,7 +1,6 @@
 const Product = require('../models/Products');
 const Review = require('../models/Review');
 
-// Create
 exports.createProduct = async (req, res) => {
   try {
     const { name, price, stock, category, brand, description } = req.body;
@@ -26,7 +25,8 @@ exports.createProduct = async (req, res) => {
       category,
       brand, 
       description,
-      images: imageUrls 
+      images: imageUrls,
+      seller_id: req.user._id || req.user.id 
     });
 
     await newProduct.save();
@@ -37,7 +37,6 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// 2. Get
 exports.getProducts = async (req, res) => {
   try {
     const queryObj = { ...req.query };
@@ -95,8 +94,17 @@ exports.getProducts = async (req, res) => {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
+exports.getSellerProducts = async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    const products = await Product.find({ seller_id: userId }).sort('-createdAt');
+    
+    res.status(200).json({ products });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
 
-// Detail
 exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -109,37 +117,49 @@ exports.getProductById = async (req, res) => {
   }
 };
 
-// Update
 exports.updateProduct = async (req, res) => {
   try {
-    const updatedProduct = await Product.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true } 
-    );
+    const product = await Product.findById(req.params.id);
     
-    if (!updatedProduct) {
+    if (!product) {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm để sửa" });
     }
-    
-    res.status(200).json({ message: "Cập nhật thành công!", product: updatedProduct });
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
-  }
-};
 
-// Delete
-exports.deleteProduct = async (req, res) => {
-  try {
-    const deletedProduct = await Product.findByIdAndDelete(req.params.id);
-    
-    if (!deletedProduct) {
-      return res.status(404).json({ message: "Không tìm thấy sản phẩm để xóa" });
+    const userId = req.user._id || req.user.id;
+
+    if (req.user.isAdmin || product.seller_id.toString() === userId.toString()) {
+        const updatedProduct = await Product.findByIdAndUpdate(
+          req.params.id,
+          req.body,
+          { new: true } 
+        );
+        return res.status(200).json({ message: "Cập nhật thành công!", product: updatedProduct });
+    } else {
+        return res.status(403).json({ message: "Bạn không có quyền sửa sản phẩm của người khác!" });
     }
     
-    res.status(200).json({ message: "Đã xóa sản phẩm thành công!" });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
 
+exports.deleteProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    
+    if (!product) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm để xóa" });
+    }
+
+    const userId = req.user._id || req.user.id;
+
+    if (req.user.isAdmin || product.seller_id.toString() === userId.toString()) {
+        await Product.findByIdAndDelete(req.params.id);
+        return res.status(200).json({ message: "Đã xóa sản phẩm thành công!" });
+    } else {
+        return res.status(403).json({ message: "Bạn không có quyền xóa sản phẩm của người khác!" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};

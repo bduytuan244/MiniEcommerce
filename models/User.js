@@ -29,10 +29,19 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  isSeller: {
+    type: Boolean,
+    default: false
+  },
   isVerified: { type: Boolean, default: false },
-  otp: { type: String },
+  otp: { type: String },  
   otpExpire: { type: Date },
-  refreshToken: { type: String }
+  refreshToken: { type: String },
+  sellerStatus: { 
+        type: String, 
+        enum: ['none', 'pending', 'approved', 'rejected'], 
+        default: 'none' 
+    }
 }, { timestamps: true });
 
 userSchema.pre('save', async function () { 

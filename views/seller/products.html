@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kho sản phẩm - Seller</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { margin: 0; font-family: 'Inter', sans-serif; display: flex; height: 100vh; background: #f4f6f9; }
+        
+        .sidebar { width: 250px; background: #fff; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; z-index: 10;}
+        .sidebar h2 { text-align: center; padding: 20px 0; margin: 0; color: #ee4d2d; font-size: 1.3rem; border-bottom: 1px solid #eee;}
+        .menu { list-style: none; padding: 0; margin: 0; flex: 1; }
+        .menu a { display: flex; align-items: center; gap: 10px; padding: 15px 20px; color: #555; text-decoration: none; transition: 0.2s; font-weight: 500;}
+        .menu a:hover, .menu a.active { background: #fff1ee; color: #ee4d2d; border-right: 4px solid #ee4d2d; }
+        .logout-btn { padding: 15px; background: #f8f9fa; color: #dc3545; text-align: center; cursor: pointer; border-top: 1px solid #eee; font-weight: 600;}
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .topbar { background: white; padding: 15px 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; z-index: 5;}
+        .content { padding: 30px; overflow-y: auto; flex: 1; }
+
+        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn-add { background: #ee4d2d; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        .btn-add:hover { background: #d73a1c; }
+
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; vertical-align: middle; }
+        th { background: #f8f9fa; color: #555; text-transform: uppercase; font-size: 0.85rem; }
+        
+        .btn-action { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; margin-right: 5px; font-size: 0.9rem; }
+        .btn-edit { background: #17a2b8; }
+        .btn-delete { background: #dc3545; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2><i class="fa-solid fa-store"></i> SELLER CENTER</h2>
+        <ul class="menu">
+            <li><a href="index.html"><i class="fa-solid fa-chart-line"></i> Bảng điều khiển</a></li>
+            <li><a href="products.html" class="active"><i class="fa-solid fa-box"></i> Kho sản phẩm</a></li> 
+            <li><a href="orders.html"><i class="fa-solid fa-clipboard-list"></i> Đơn hàng của tôi</a></li>
+        </ul>
+        <div class="logout-btn" onclick="sellerLogout()">Đăng xuất</div>
+    </div>
+
+    <div class="main-content">
+        <div class="topbar">
+            <h3 style="margin: 0; color: #555;">Quản lý Sản phẩm</h3>
+        </div>
+
+        <div class="content">
+            <div class="header-actions">
+                <h2 style="margin: 0;">Sản phẩm của Shop</h2>
+                <button class="btn-add" onclick="window.location.href='product-form.html'"><i class="fa-solid fa-plus"></i> Đăng sản phẩm mới</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ảnh</th>
+                        <th>Tên sản phẩm</th>
+                        <th>Giá bán</th>
+                        <th style="text-align: center;">Kho</th>
+                        <th style="text-align: center;">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="product-table-body">
+                    <tr><td colspan="5" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = '../auth/login.html';
+
+        async function loadMyProducts() {
+            try {
+                const res = await fetch('http://localhost:5000/api/products/myshop', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }); 
+                const data = await res.json();
+                const tbody = document.getElementById('product-table-body');
+                
+                if (data.products.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Shop của bạn chưa có sản phẩm nào.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.products.map(p => `
+                    <tr>
+                        <td><img src="${p.images[0] || 'https://via.placeholder.com/50'}" width="50" height="50" style="object-fit:contain; border-radius:6px; border: 1px solid #eee;"></td>
+                        <td><strong>${p.name}</strong></td>
+                        <td style="color:#ee4d2d; font-weight:bold;">${Number(p.price).toLocaleString('vi-VN')} đ</td>
+                        <td style="text-align: center;">${p.stock}</td>
+                        <td style="text-align: center;">
+                            <button class="btn-action btn-edit" onclick="window.location.href='product-form.html?id=${p._id}'"><i class="fa-solid fa-pen"></i></button>
+                            <button class="btn-action btn-delete" onclick="deleteProduct('${p._id}')"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                Swal.fire('Lỗi', 'Lỗi tải danh sách sản phẩm!', 'error');
+            }
+        }
+
+        async function deleteProduct(id) {
+            Swal.fire({
+                title: 'Xóa sản phẩm?',
+                text: "Khách hàng sẽ không thể mua sản phẩm này nữa.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonText: 'Hủy'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const res = await fetch(`http://localhost:5000/api/products/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        Swal.fire('Thành công', 'Đã xóa', 'success');
+                        loadMyProducts(); 
+                    } else {
+                        Swal.fire('Lỗi', 'Không thể xóa', 'error');
+                    }
+                }
+            });
+        }
+
+        function sellerLogout() { localStorage.removeItem('token'); window.location.href = '../auth/login.html'; }
+        loadMyProducts();
+    </script>
+</body>
+</html>

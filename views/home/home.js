@@ -12,6 +12,24 @@ document.addEventListener('DOMContentLoaded', () => {
     fetch('../layouts/header.html').then(res => res.text()).then(html => {
         headerContainer.innerHTML = html;
         if (typeof checkLoginState === 'function') checkLoginState();
+        
+        const userStr = localStorage.getItem('user');
+        console.log("1. Dữ liệu trong LocalStorage:", userStr); 
+        
+        if (userStr) {
+            const user = JSON.parse(userStr);
+            console.log("2. Quyền isSeller của tài khoản này là:", user.isSeller); 
+
+            if (user.isSeller === true) {
+                const sellerLink = document.getElementById('link-seller-center');
+                if (sellerLink) {
+                    sellerLink.style.display = 'flex'; 
+                    console.log("3. ĐÃ BẬT HIỂN THỊ NÚT KÊNH NGƯỜI BÁN THÀNH CÔNG!");
+                } else {
+                    console.log("3. LỖI: Không tìm thấy ID link-seller-center trong HTML");
+                }
+            }
+        }
     });
 
     fetch('../layouts/footer.html').then(res => res.text()).then(html => {
