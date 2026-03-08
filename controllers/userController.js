@@ -138,3 +138,49 @@ exports.becomeSeller = async (req, res) => {
         res.status(500).json({ message: "Lỗi Server" });
     }
 };
+
+exports.requestSeller = async (req, res) => {
+    try {
+        const userId = req.user._id || req.user.id;
+        const user = await User.findById(userId);
+
+        if (user.isSeller) return res.status(400).json({ message: "Bạn đã là Người bán rồi!" });
+        if (user.sellerStatus === 'pending') return res.status(400).json({ message: "Yêu cầu của bạn đang được chờ duyệt!" });
+
+        user.sellerStatus = 'pending'; 
+        await user.save();
+
+        user.password = undefined;
+        res.status(200).json({ message: "Đã gửi yêu cầu! Vui lòng chờ Admin phê duyệt.", user });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi Server" });
+    }
+};
+
+exports.getSellerRequests = async (req, res) => {
+    try {
+        const users = await User.find({ sellerStatus: 'pending' }).select('-password');
+        res.status(200).json(users);
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi Server" });
+    }
+};
+
+exports.handleSellerRequest = async (req, res) => {
+    try {
+        const { status } = req.body; 
+        const user = await User.findById(req.params.id);
+        
+        if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+
+        user.sellerStatus = status;
+        if (status === 'approved') {
+            user.isSeller = true; 
+        }
+
+        await user.save();
+        res.status(200).json({ message: `Đã ${status === 'approved' ? 'duyệt' : 'từ chối'} yêu cầu của ${user.name}` });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi Server" });
+    }
+};
