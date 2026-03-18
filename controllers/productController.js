@@ -3,7 +3,7 @@ const Review = require('../models/Review');
 
 exports.createProduct = async (req, res) => {
   try {
-    const { name, price, stock, category, brand, description } = req.body;
+    const { name, price, stock, countInStock, category, brand, description } = req.body;
     
     let imageUrls = [];
     
@@ -18,10 +18,12 @@ exports.createProduct = async (req, res) => {
         return res.status(400).json({ message: "Vui lòng tải lên ít nhất 1 ảnh sản phẩm" });
     }
 
+    const actualStock = stock !== undefined ? stock : (countInStock || 0);
+
     const newProduct = new Product({
       name, 
       price, 
-      stock, 
+      countInStock: actualStock, 
       category,
       brand, 
       description,
@@ -130,9 +132,16 @@ exports.updateProduct = async (req, res) => {
     const userId = req.user._id || req.user.id;
 
     if (req.user.isAdmin || product.seller_id.toString() === userId.toString()) {
+        
+        let updateData = { ...req.body };
+        if (updateData.stock !== undefined) {
+            updateData.countInStock = updateData.stock; 
+            delete updateData.stock; 
+        }
+
         const updatedProduct = await Product.findByIdAndUpdate(
           req.params.id,
-          req.body,
+          updateData,
           { new: true } 
         );
         return res.status(200).json({ message: "Cập nhật thành công!", product: updatedProduct });
