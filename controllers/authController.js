@@ -104,7 +104,11 @@ exports.login = async (req, res) => {
     if (!user || !(await user.matchPassword(password))) {
       return res.status(401).json({ message: "Email hoặc mật khẩu không chính xác!" });
     }
-    
+
+    if (user.isLocked) {
+            return res.status(403).json({ message: "Tài khoản của bạn đã bị khóa bởi Quản trị viên!" });
+    }
+
     if (!user.isVerified) {
       return res.status(401).json({ message: "Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email!" });
     }
