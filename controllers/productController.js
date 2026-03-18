@@ -40,20 +40,21 @@ exports.createProduct = async (req, res) => {
 exports.getProducts = async (req, res) => {
   try {
     const queryObj = { ...req.query };
-    const excludedFields = ['page', 'sort', 'limit', 'fields'];
+    
+    const excludedFields = ['page', 'sort', 'limit', 'fields', 'keyword'];
     excludedFields.forEach(el => delete queryObj[el]);
 
     let queryStr = JSON.stringify(queryObj);
     queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
     
     let queryConditions = JSON.parse(queryStr);
+    
     if (req.query.keyword) {
-        queryConditions.name = { $regex: req.query.keyword, $options: 'i' };
-        delete queryConditions.keyword; 
+        queryConditions.name = { $regex: `^${req.query.keyword}`, $options: 'i' };
     }
     
     if (req.query.brand) {
-        queryConditions.brand = req.query.brand;
+        queryConditions.brand = { $regex: `^${req.query.brand}$`, $options: 'i' };
     }
 
     let query = Product.find(queryConditions);
@@ -94,6 +95,7 @@ exports.getProducts = async (req, res) => {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
+
 exports.getSellerProducts = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
