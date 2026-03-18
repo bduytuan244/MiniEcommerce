@@ -224,3 +224,26 @@ exports.getSellerOrders = async (req, res) => {
         res.status(500).json({ message: "Lỗi Server" });
     }
 };
+
+exports.cancelOrder = async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id);
+        
+        if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+        
+        if (order.user.toString() !== req.user.id && !req.user.isAdmin) {
+            return res.status(403).json({ message: "Không có quyền thao tác" });
+        }
+
+        if (order.status !== 'Chờ xác nhận' && order.status !== 'pending') {
+            return res.status(400).json({ message: "Đơn hàng đã được xử lý, không thể hủy!" });
+        }
+
+        order.status = 'Đã hủy'; 
+        await order.save();
+        
+        res.status(200).json({ message: "Hủy đơn hàng thành công", order });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi Server" });
+    }
+};
