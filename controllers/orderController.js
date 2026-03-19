@@ -120,15 +120,28 @@ exports.createOrder = async (req, res) => {
 
 exports.getOrders = async (req, res) => {
     try {
-        const { status, customer, product } = req.query;
+        const { status, customer, product, date } = req.query;
         let queryConditions = {};
 
-        if (status && status !== 'Tất cả' && status !== '') {
+        if (status && status !== 'Tất cả') {
             queryConditions.status = status;
         }
 
         if (product) {
             queryConditions['orderItems.name'] = { $regex: product, $options: 'i' };
+        }
+
+        if (date) {
+            const startDate = new Date(date);
+            startDate.setHours(0, 0, 0, 0);
+            
+            const endDate = new Date(date);
+            endDate.setHours(23, 59, 59, 999);
+
+            queryConditions.createdAt = {
+                $gte: startDate,
+                $lte: endDate
+            };
         }
 
         let orders = await Order.find(queryConditions)
