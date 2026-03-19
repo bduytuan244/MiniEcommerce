@@ -22,6 +22,14 @@
         .topbar { background: white; padding: 15px 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; z-index: 5;}
         .content { padding: 30px; overflow-y: auto; flex: 1; }
 
+        .filter-bar { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap; align-items: center;}
+        .filter-bar input, .filter-bar select { padding: 10px; border: 1px solid #ddd; border-radius: 6px; outline: none; flex: 1; min-width: 150px; font-family: 'Inter'; font-size: 0.95rem;}
+        .filter-bar input:focus, .filter-bar select:focus { border-color: #007bff; }
+        .btn-filter { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;}
+        .btn-filter:hover { background: #0056b3; }
+        .btn-reset { background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;}
+        .btn-reset:hover { background: #5a6268; }
+
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; vertical-align: middle;}
         th { background: #f8f9fa; color: #555; font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
@@ -37,7 +45,6 @@
         .btn-view { background: #f0f8ff; color: #007bff; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; }
         .btn-view:hover { background: #cce5ff; }
 
-        /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(2px); }
         .modal-content { background: white; padding: 25px; border-radius: 12px; width: 650px; max-width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 5px 25px rgba(0,0,0,0.2); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
@@ -59,8 +66,8 @@
         <ul class="menu">
             <li><a href="index.html"><i class="fa-solid fa-chart-pie"></i> Tổng quan</a></li>
             <li><a href="products.html"><i class="fa-solid fa-boxes-stacked"></i> Sản phẩm</a></li>
-            <li><a href="orders.html"><i class="fa-solid fa-cart-flatbed"></i> Đơn hàng</a></li>
-            <li><a href="users.html" class="active"><i class="fa-solid fa-users-gear"></i> Người dùng</a></li>
+            <li><a href="orders.html" class="active"><i class="fa-solid fa-cart-flatbed"></i> Đơn hàng</a></li>
+            <li><a href="users.html"><i class="fa-solid fa-users-gear"></i> Người dùng</a></li>
             <li><a href="seller-requests.html"><i class="fa-solid fa-user-clock"></i> Duyệt Người Bán</a></li>
             <li><a href="coupons.html"><i class="fa-solid fa-ticket"></i> Mã giảm giá</a></li>
         </ul>
@@ -74,6 +81,25 @@
 
         <div class="content">
             <h2 style="margin-top: 0; color: #333; margin-bottom: 20px;">Danh sách Đơn hàng</h2>
+            
+            <div class="filter-bar">
+                <input type="date" id="filter-date" title="Chọn ngày đặt">
+                <select id="filter-status">
+                    <option value="">-- Tất cả trạng thái --</option>
+                    <option value="Chờ xác nhận">Chờ xác nhận</option>
+                    <option value="Đang đóng gói">Đang đóng gói</option>
+                    <option value="Đang vận chuyển">Đang vận chuyển</option>
+                    <option value="Hoàn thành">Hoàn thành</option>
+                    <option value="Đã hủy">Đã hủy</option>
+                    <option value="Trả hàng">Trả hàng</option>
+                </select>
+                <input type="text" id="filter-customer" placeholder="Tên khách hàng...">
+                <input type="text" id="filter-product" placeholder="Tên sản phẩm...">
+                
+                <button class="btn-filter" onclick="loadOrders()"><i class="fa-solid fa-filter"></i> Lọc</button>
+                <button class="btn-reset" onclick="resetFilters()"><i class="fa-solid fa-rotate-right"></i> Đặt lại</button>
+            </div>
+
             <table>
                 <thead>
                     <tr>
@@ -111,7 +137,7 @@
                     <option value="Đã hủy">Hủy đơn</option>
                     <option value="Trả hàng">Trả hàng</option>
                 </select>
-                <button class="btn-update" id="btn-update-status" onclick="updateStatus()"><i class="fa-solid fa-check-double"></i> Lưu thay đổi</button>
+                <button class="btn-update" id="btn-update-status" onclick="updateOrderStatus()"><i class="fa-solid fa-check-double"></i> Lưu thay đổi</button>
             </div>
         </div>
     </div>
@@ -123,24 +149,35 @@
 
         async function loadOrders() {
             try {
-                const res = await fetch('http://localhost:5000/api/orders', {
+                const date = document.getElementById('filter-date').value;
+                const status = document.getElementById('filter-status').value;
+                const customer = document.getElementById('filter-customer').value;
+                const product = document.getElementById('filter-product').value;
+
+                let url = 'http://localhost:5000/api/orders?';
+                if (date) url += `date=${date}&`;
+                if (status) url += `status=${status}&`;
+                if (customer) url += `customer=${customer}&`;
+                if (product) url += `product=${product}`;
+
+                const res = await fetch(url, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await res.json();
                 const tbody = document.getElementById('order-table-body');
                 
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Chưa có đơn hàng nào</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Không tìm thấy đơn hàng nào phù hợp!</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = data.map(order => {
                     let badgeClass = 'bg-pending';
-                    const status = order.status || 'Chờ xác nhận';
-                    if (status === 'Đang đóng gói') badgeClass = 'bg-processing';
-                    if (status === 'Đang vận chuyển') badgeClass = 'bg-shipped';
-                    if (status === 'Hoàn thành') badgeClass = 'bg-delivered';
-                    if (status === 'Đã hủy' || status === 'Trả hàng') badgeClass = 'bg-cancelled';
+                    const orderStatus = order.status || 'Chờ xác nhận';
+                    if (orderStatus === 'Đang đóng gói') badgeClass = 'bg-processing';
+                    if (orderStatus === 'Đang vận chuyển') badgeClass = 'bg-shipped';
+                    if (orderStatus === 'Hoàn thành') badgeClass = 'bg-delivered';
+                    if (orderStatus === 'Đã hủy' || orderStatus === 'Trả hàng') badgeClass = 'bg-cancelled';
 
                     return `
                         <tr>
@@ -151,7 +188,7 @@
                             </td>
                             <td>${new Date(order.createdAt).toLocaleDateString('vi-VN')}</td>
                             <td style="font-weight:bold; color:#ee4d2d;">${Number(order.totalPrice).toLocaleString('vi-VN')} đ</td>
-                            <td style="text-align: center;"><span class="badge ${badgeClass}">${status}</span></td>
+                            <td style="text-align: center;"><span class="badge ${badgeClass}">${orderStatus}</span></td>
                             <td style="text-align: center;">
                                 <button onclick="openModal('${order._id}')" class="btn-view"><i class="fa-solid fa-eye"></i> Xem</button>
                             </td>
@@ -161,6 +198,14 @@
             } catch (error) {
                 Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
             }
+        }
+
+        function resetFilters() {
+            document.getElementById('filter-date').value = '';
+            document.getElementById('filter-status').value = '';
+            document.getElementById('filter-customer').value = '';
+            document.getElementById('filter-product').value = '';
+            loadOrders(); 
         }
 
         async function openModal(id) {
@@ -210,7 +255,7 @@
             }
         }
 
-        async function updateStatus() {
+        async function updateOrderStatus() {
             const newStatus = document.getElementById('statusSelect').value;
             
             Swal.fire({
@@ -234,12 +279,12 @@
                             body: JSON.stringify({ status: newStatus })
                         });
 
+                        const data = await res.json();
                         if (res.ok) {
                             Swal.fire({title: 'Thành công!', icon: 'success', timer: 1500, showConfirmButton: false});
                             closeModal();
-                            loadOrders(); 
+                            loadOrders();
                         } else {
-                            const data = await res.json();
                             Swal.fire('Lỗi', data.message, 'error');
                         }
                     } catch (error) {
