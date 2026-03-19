@@ -27,7 +27,15 @@
         .card { background: white; padding: 25px 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center; transition: transform 0.3s; border-bottom: 4px solid transparent; }
         .card:hover { transform: translateY(-5px); }
         .card h3 { margin: 0; color: #888; font-size: 1rem; text-transform: uppercase; font-weight: 600; letter-spacing: 1px;}
-        .card p { margin: 15px 0 0; font-size: 2.2rem; font-weight: 700; color: #333; }
+        .card p { 
+            margin: 15px 0 0; 
+            font-size: 2rem; 
+            font-weight: 700; 
+            color: #ee4d2d; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis;
+        }
         
         .card.revenue { border-color: #28a745; }
         .card.revenue p { color: #28a745; }
@@ -48,10 +56,11 @@
     <div class="sidebar">
         <h2><i class="fa-solid fa-gear"></i> MINI ADMIN</h2>
         <ul class="menu">
-            <li><a href="index.html" class="active"><i class="fa-solid fa-chart-pie"></i> Tổng quan</a></li>
-            <li><a href="products.html"><i class="fa-solid fa-boxes-stacked"></i> Sản phẩm</a></li> 
+            <li><a href="index.html"><i class="fa-solid fa-chart-pie"></i> Tổng quan</a></li>
+            <li><a href="products.html"><i class="fa-solid fa-boxes-stacked"></i> Sản phẩm</a></li>
             <li><a href="orders.html"><i class="fa-solid fa-cart-flatbed"></i> Đơn hàng</a></li>
-            <li><a href="users.html"><i class="fa-solid fa-users-gear"></i> Người dùng</a></li>
+            <li><a href="users.html" class="active"><i class="fa-solid fa-users-gear"></i> Người dùng</a></li>
+            <li><a href="seller-requests.html"><i class="fa-solid fa-user-clock"></i> Duyệt Người Bán</a></li>
             <li><a href="coupons.html"><i class="fa-solid fa-ticket"></i> Mã giảm giá</a></li>
         </ul>
         <div class="logout-btn" onclick="adminLogout()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</div>

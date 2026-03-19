@@ -35,6 +35,9 @@
         .status-shipping { background: #17a2b8; }
         .status-completed { background: #28a745; }
         .status-cancelled { background: #dc3545; }
+
+        .btn-cancel-order { background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; display: flex; align-items: center; gap: 8px; }
+        .btn-cancel-order:hover { background: #bb2d3b; }
     </style>
 </head>
 <body>
@@ -87,9 +90,13 @@
             </tfoot>
         </table>
         
-        <div style="margin-top: 30px; text-align: right; background: #fafafa; padding: 20px; border-radius: 8px; border: 1px solid #eee;">
-            <span style="font-size: 1.1rem; font-weight: 600; margin-right: 15px;">Trạng thái hiện tại:</span> 
-            <span id="orderStatus" class="badge">...</span>
+        <div style="margin-top: 30px; display: flex; justify-content: space-between; align-items: center; background: #fafafa; padding: 20px; border-radius: 8px; border: 1px solid #eee;">
+            <div>
+                <span style="font-size: 1.1rem; font-weight: 600; margin-right: 15px;">Trạng thái hiện tại:</span> 
+                <span id="orderStatus" class="badge">...</span>
+            </div>
+            <div id="actionContainer">
+                </div>
         </div>
     </div>
 
@@ -160,6 +167,17 @@
 
                     document.getElementById('totalPrice').innerText = Number(order.totalPrice).toLocaleString('vi-VN') + ' đ';
 
+                    const actionContainer = document.getElementById('actionContainer');
+                    if (order.status === 'Chờ xác nhận' || order.status === 'pending') {
+                        actionContainer.innerHTML = `
+                            <button class="btn-cancel-order" onclick="cancelMyOrder('${order._id}')">
+                                <i class="fa-solid fa-ban"></i> Hủy đơn hàng
+                            </button>
+                        `;
+                    } else {
+                        actionContainer.innerHTML = ''; 
+                    }
+
                 } catch (error) {
                     Swal.fire('Lỗi', "Lỗi tải đơn hàng: " + error.message, 'error');
                 }
@@ -167,6 +185,41 @@
 
             fetchOrderDetail();
         });
+
+        window.cancelMyOrder = async function(orderId) {
+            const result = await Swal.fire({
+                title: 'Hủy đơn hàng?',
+                text: "Bạn có chắc chắn muốn hủy đơn hàng này không?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Đồng ý hủy'
+            });
+
+            if (result.isConfirmed) {
+                const token = localStorage.getItem('token');
+                try {
+                    const res = await fetch(`http://localhost:5000/api/orders/${orderId}/cancel`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    const data = await res.json();
+                    
+                    if (res.ok) {
+                        Swal.fire('Thành công!', 'Đơn hàng của bạn đã được hủy.', 'success')
+                        .then(() => {
+                            location.reload(); 
+                        });
+                    } else {
+                        Swal.fire('Lỗi', data.message || 'Không thể hủy đơn hàng này', 'error');
+                    }
+                } catch (error) {
+                    Swal.fire('Lỗi', 'Không kết nối được với máy chủ', 'error');
+                }
+            }
+        };
     </script>
 </body>
 </html>

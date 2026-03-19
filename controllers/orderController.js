@@ -5,7 +5,7 @@ const sendEmail = require('../utils/sendEmail');
 
 exports.createOrder = async (req, res) => {
   try {
-    const { orderItems, shippingInfo, paymentMethod } = req.body;
+    const { orderItems, shippingInfo, paymentMethod, totalPrice } = req.body;
 
     if (!orderItems || orderItems.length === 0) {
       return res.status(400).json({ message: "Giỏ hàng rỗng" });
@@ -16,7 +16,7 @@ exports.createOrder = async (req, res) => {
     }
 
     const orderItemsProcessed = [];
-    let calculatedTotalPrice = 0;
+    let calculatedTotalPrice = 0; 
 
     for (const item of orderItems) {
       const productId = item.productId || item.product;
@@ -37,7 +37,7 @@ exports.createOrder = async (req, res) => {
         qty: item.qty
       });
     }
-
+    const finalPrice = totalPrice ? Number(totalPrice) : calculatedTotalPrice;
     const order = new Order({
       orderItems: orderItemsProcessed,
       user: req.user._id || req.user.id,
@@ -45,9 +45,9 @@ exports.createOrder = async (req, res) => {
       address: shippingInfo.address,
       phone: shippingInfo.phone,
       paymentMethod,
-      itemsPrice: calculatedTotalPrice,
+      itemsPrice: calculatedTotalPrice, 
       shippingPrice: 0,
-      totalPrice: calculatedTotalPrice, 
+      totalPrice: finalPrice, 
       isPaid: false,
       status: 'Chờ xác nhận'
     });
@@ -88,7 +88,7 @@ exports.createOrder = async (req, res) => {
                         </tbody>
                     </table>
                     
-                    <h3 style="text-align: right; color: #d32f2f;">Tổng cộng: ${calculatedTotalPrice.toLocaleString('vi-VN')} đ</h3>
+                    <h3 style="text-align: right; color: #d32f2f;">Tổng cộng: ${finalPrice.toLocaleString('vi-VN')} đ</h3>
                     
                     <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-top: 20px;">
                         <p style="margin: 0 0 5px 0;"><strong>📍 Địa chỉ giao hàng:</strong> ${shippingInfo.address}</p>
@@ -104,7 +104,7 @@ exports.createOrder = async (req, res) => {
             await sendEmail({
                 email: emailToSend,
                 subject: `🎉 Xác nhận đơn hàng #${createdOrder._id.toString().slice(-6).toUpperCase()}`,
-                message: `Xin chào ${nameToSend}, Cảm ơn bạn đã đặt hàng. Tổng tiền: ${calculatedTotalPrice.toLocaleString('vi-VN')}đ`, 
+                message: `Xin chào ${nameToSend}, Cảm ơn bạn đã đặt hàng. Tổng tiền: ${finalPrice.toLocaleString('vi-VN')}đ`, 
                 html: emailHtmlTemplate 
             });
         }
@@ -120,9 +120,47 @@ exports.createOrder = async (req, res) => {
 
 exports.getOrders = async (req, res) => {
     try {
-        const orders = await Order.find().populate('user', 'id name email').sort({ createdAt: -1 });
+        const { status, customer, product, date } = req.query;
+        let queryConditions = {};
+
+        if (status && status !== 'Tất cả') {
+            queryConditions.status = status;
+        }
+
+        if (product) {
+            queryConditions['orderItems.name'] = { $regex: product, $options: 'i' };
+        }
+
+        if (date) {
+            const startDate = new Date(date);
+            startDate.setHours(0, 0, 0, 0);
+            
+            const endDate = new Date(date);
+            endDate.setHours(23, 59, 59, 999);
+
+            queryConditions.createdAt = {
+                $gte: startDate,
+                $lte: endDate
+            };
+        }
+
+        let orders = await Order.find(queryConditions)
+            .populate('user', 'id name email')
+            .sort({ createdAt: -1 });
+
+        if (customer) {
+            const keyword = customer.toLowerCase();
+            orders = orders.filter(order => {
+                const name1 = order.customerName ? order.customerName.toLowerCase() : '';
+                const name2 = (order.user && order.user.name) ? order.user.name.toLowerCase() : '';
+                return name1.includes(keyword) || name2.includes(keyword);
+            });
+        }
+
         res.status(200).json(orders);
-    } catch (error) { res.status(500).json({ message: error.message }); }
+    } catch (error) { 
+        res.status(500).json({ message: error.message }); 
+    }
 };
 
 exports.updateOrderStatus = async (req, res) => {
@@ -140,18 +178,28 @@ exports.updateOrderStatus = async (req, res) => {
         };
         const newStatus = statusMap[req.body.status] || req.body.status;
 
+        if (order.status === 'Đã hủy') {
+            return res.status(400).json({ message: "Đơn hàng này đã bị hủy, không thể thay đổi trạng thái!" });
+        }
+
+        if (order.status === 'Hoàn thành' && newStatus === 'Đã hủy') {
+            return res.status(400).json({ message: "Đơn hàng đã giao thành công, không thể hủy!" });
+        }
+
         if (newStatus === 'Đã hủy' || newStatus === 'Trả hàng') {
              if (order.status !== 'Đã hủy' && order.status !== 'Trả hàng') {
                 for (const item of order.orderItems) {
                     const product = await Product.findById(item.product);
                     if (product) {
-                        product.stock = (product.stock || 0) + item.qty;
+                        product.countInStock = (product.countInStock || 0) + item.qty;
                         await product.save();
                     }
                 }
             }
         }
+
         order.status = newStatus;
+
         if (newStatus === 'Hoàn thành') {
             order.isDelivered = true;
             order.deliveredAt = Date.now();
@@ -221,6 +269,29 @@ exports.getSellerOrders = async (req, res) => {
         res.status(200).json(orders);
     } catch (error) {
         console.error("Lỗi lấy đơn hàng cho Seller:", error);
+        res.status(500).json({ message: "Lỗi Server" });
+    }
+};
+
+exports.cancelOrder = async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id);
+        
+        if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+        
+        if (order.user.toString() !== req.user.id && !req.user.isAdmin) {
+            return res.status(403).json({ message: "Không có quyền thao tác" });
+        }
+
+        if (order.status !== 'Chờ xác nhận' && order.status !== 'pending') {
+            return res.status(400).json({ message: "Đơn hàng đã được xử lý, không thể hủy!" });
+        }
+
+        order.status = 'Đã hủy'; 
+        await order.save();
+        
+        res.status(200).json({ message: "Hủy đơn hàng thành công", order });
+    } catch (error) {
         res.status(500).json({ message: "Lỗi Server" });
     }
 };

@@ -3,7 +3,7 @@ const Review = require('../models/Review');
 
 exports.createProduct = async (req, res) => {
   try {
-    const { name, price, stock, category, brand, description } = req.body;
+    const { name, price, stock, countInStock, category, brand, description } = req.body;
     
     let imageUrls = [];
     
@@ -18,10 +18,12 @@ exports.createProduct = async (req, res) => {
         return res.status(400).json({ message: "Vui lòng tải lên ít nhất 1 ảnh sản phẩm" });
     }
 
+    const actualStock = stock !== undefined ? stock : (countInStock || 0);
+
     const newProduct = new Product({
       name, 
       price, 
-      stock, 
+      countInStock: actualStock, 
       category,
       brand, 
       description,
@@ -40,20 +42,21 @@ exports.createProduct = async (req, res) => {
 exports.getProducts = async (req, res) => {
   try {
     const queryObj = { ...req.query };
-    const excludedFields = ['page', 'sort', 'limit', 'fields'];
+    
+    const excludedFields = ['page', 'sort', 'limit', 'fields', 'keyword'];
     excludedFields.forEach(el => delete queryObj[el]);
 
     let queryStr = JSON.stringify(queryObj);
     queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
     
     let queryConditions = JSON.parse(queryStr);
+    
     if (req.query.keyword) {
-        queryConditions.name = { $regex: req.query.keyword, $options: 'i' };
-        delete queryConditions.keyword; 
+        queryConditions.name = { $regex: `^${req.query.keyword}`, $options: 'i' };
     }
     
     if (req.query.brand) {
-        queryConditions.brand = req.query.brand;
+        queryConditions.brand = { $regex: `^${req.query.brand}$`, $options: 'i' };
     }
 
     let query = Product.find(queryConditions);
@@ -94,6 +97,7 @@ exports.getProducts = async (req, res) => {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
+
 exports.getSellerProducts = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
@@ -128,9 +132,16 @@ exports.updateProduct = async (req, res) => {
     const userId = req.user._id || req.user.id;
 
     if (req.user.isAdmin || product.seller_id.toString() === userId.toString()) {
+        
+        let updateData = { ...req.body };
+        if (updateData.stock !== undefined) {
+            updateData.countInStock = updateData.stock; 
+            delete updateData.stock; 
+        }
+
         const updatedProduct = await Product.findByIdAndUpdate(
           req.params.id,
-          req.body,
+          updateData,
           { new: true } 
         );
         return res.status(200).json({ message: "Cập nhật thành công!", product: updatedProduct });
