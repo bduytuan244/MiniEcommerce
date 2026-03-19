@@ -120,9 +120,34 @@ exports.createOrder = async (req, res) => {
 
 exports.getOrders = async (req, res) => {
     try {
-        const orders = await Order.find().populate('user', 'id name email').sort({ createdAt: -1 });
+        const { status, customer, product } = req.query;
+        let queryConditions = {};
+
+        if (status && status !== 'Tất cả' && status !== '') {
+            queryConditions.status = status;
+        }
+
+        if (product) {
+            queryConditions['orderItems.name'] = { $regex: product, $options: 'i' };
+        }
+
+        let orders = await Order.find(queryConditions)
+            .populate('user', 'id name email')
+            .sort({ createdAt: -1 });
+
+        if (customer) {
+            const keyword = customer.toLowerCase();
+            orders = orders.filter(order => {
+                const name1 = order.customerName ? order.customerName.toLowerCase() : '';
+                const name2 = (order.user && order.user.name) ? order.user.name.toLowerCase() : '';
+                return name1.includes(keyword) || name2.includes(keyword);
+            });
+        }
+
         res.status(200).json(orders);
-    } catch (error) { res.status(500).json({ message: error.message }); }
+    } catch (error) { 
+        res.status(500).json({ message: error.message }); 
+    }
 };
 
 exports.updateOrderStatus = async (req, res) => {
