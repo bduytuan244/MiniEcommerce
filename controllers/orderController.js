@@ -140,18 +140,28 @@ exports.updateOrderStatus = async (req, res) => {
         };
         const newStatus = statusMap[req.body.status] || req.body.status;
 
+        if (order.status === 'Đã hủy') {
+            return res.status(400).json({ message: "Đơn hàng này đã bị hủy, không thể thay đổi trạng thái!" });
+        }
+
+        if (order.status === 'Hoàn thành' && newStatus === 'Đã hủy') {
+            return res.status(400).json({ message: "Đơn hàng đã giao thành công, không thể hủy!" });
+        }
+
         if (newStatus === 'Đã hủy' || newStatus === 'Trả hàng') {
              if (order.status !== 'Đã hủy' && order.status !== 'Trả hàng') {
                 for (const item of order.orderItems) {
                     const product = await Product.findById(item.product);
                     if (product) {
-                        product.stock = (product.stock || 0) + item.qty;
+                        product.countInStock = (product.countInStock || 0) + item.qty;
                         await product.save();
                     }
                 }
             }
         }
+
         order.status = newStatus;
+
         if (newStatus === 'Hoàn thành') {
             order.isDelivered = true;
             order.deliveredAt = Date.now();
