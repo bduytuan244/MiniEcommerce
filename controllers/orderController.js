@@ -5,7 +5,7 @@ const sendEmail = require('../utils/sendEmail');
 
 exports.createOrder = async (req, res) => {
   try {
-    const { orderItems, shippingInfo, paymentMethod } = req.body;
+    const { orderItems, shippingInfo, paymentMethod, totalPrice } = req.body;
 
     if (!orderItems || orderItems.length === 0) {
       return res.status(400).json({ message: "Giỏ hàng rỗng" });
@@ -16,7 +16,7 @@ exports.createOrder = async (req, res) => {
     }
 
     const orderItemsProcessed = [];
-    let calculatedTotalPrice = 0;
+    let calculatedTotalPrice = 0; 
 
     for (const item of orderItems) {
       const productId = item.productId || item.product;
@@ -37,7 +37,7 @@ exports.createOrder = async (req, res) => {
         qty: item.qty
       });
     }
-
+    const finalPrice = totalPrice ? Number(totalPrice) : calculatedTotalPrice;
     const order = new Order({
       orderItems: orderItemsProcessed,
       user: req.user._id || req.user.id,
@@ -45,9 +45,9 @@ exports.createOrder = async (req, res) => {
       address: shippingInfo.address,
       phone: shippingInfo.phone,
       paymentMethod,
-      itemsPrice: calculatedTotalPrice,
+      itemsPrice: calculatedTotalPrice, 
       shippingPrice: 0,
-      totalPrice: calculatedTotalPrice, 
+      totalPrice: finalPrice, 
       isPaid: false,
       status: 'Chờ xác nhận'
     });
@@ -88,7 +88,7 @@ exports.createOrder = async (req, res) => {
                         </tbody>
                     </table>
                     
-                    <h3 style="text-align: right; color: #d32f2f;">Tổng cộng: ${calculatedTotalPrice.toLocaleString('vi-VN')} đ</h3>
+                    <h3 style="text-align: right; color: #d32f2f;">Tổng cộng: ${finalPrice.toLocaleString('vi-VN')} đ</h3>
                     
                     <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-top: 20px;">
                         <p style="margin: 0 0 5px 0;"><strong>📍 Địa chỉ giao hàng:</strong> ${shippingInfo.address}</p>
@@ -104,7 +104,7 @@ exports.createOrder = async (req, res) => {
             await sendEmail({
                 email: emailToSend,
                 subject: `🎉 Xác nhận đơn hàng #${createdOrder._id.toString().slice(-6).toUpperCase()}`,
-                message: `Xin chào ${nameToSend}, Cảm ơn bạn đã đặt hàng. Tổng tiền: ${calculatedTotalPrice.toLocaleString('vi-VN')}đ`, 
+                message: `Xin chào ${nameToSend}, Cảm ơn bạn đã đặt hàng. Tổng tiền: ${finalPrice.toLocaleString('vi-VN')}đ`, 
                 html: emailHtmlTemplate 
             });
         }
