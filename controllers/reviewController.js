@@ -5,7 +5,7 @@ const Order = require('../models/Order');
 exports.addReview = async (req, res) => {
   try {
     const { rating, comment, productId } = req.body; 
-    const userId = req.user.id || req.user._id; 
+    const userId = req.user.id || req.user._id;   
 
     const product = await Product.findById(productId);
     if (!product) {

@@ -34,15 +34,24 @@
 <body>
 
     <div class="sidebar">
-        <h2><i class="fa-solid fa-store"></i> SELLER CENTER</h2>
+        <h2 onclick="window.location.href='../home/index.html'" style="cursor: pointer; transition: 0.2s;" title="Về trang mua sắm">
+            <i class="fa-solid fa-store"></i> SELLER CENTER
+        </h2>
+        
         <ul class="menu">
             <li><a href="index.html"><i class="fa-solid fa-chart-line"></i> Bảng điều khiển</a></li>
             <li><a href="products.html"><i class="fa-solid fa-box"></i> Kho sản phẩm</a></li> 
-            <li><a href="orders.html" class="active"><i class="fa-solid fa-clipboard-list"></i> Đơn hàng của tôi</a></li>
+            <li><a href="orders.html"><i class="fa-solid fa-clipboard-list"></i> Đơn hàng của tôi</a></li>
+            
+            <li style="margin-top: 15px; border-top: 1px dashed #ddd; padding-top: 5px;">
+                <a href="../home/index.html" style="color: #0d6efd;">
+                    <i class="fa-solid fa-house-user"></i> Về trang mua sắm
+                </a>
+            </li>
         </ul>
+        
         <div class="logout-btn" onclick="sellerLogout()">Đăng xuất</div>
     </div>
-
     <div class="main-content">
         <div class="topbar"><h3 style="margin: 0; color: #555;">Quản lý Đơn hàng</h3></div>
 
