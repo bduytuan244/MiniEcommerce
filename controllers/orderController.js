@@ -251,27 +251,6 @@ exports.getOrderById = async (req, res) => {
     }
 };
 
-exports.getSellerOrders = async (req, res) => {
-    try {
-        const sellerId = req.user._id || req.user.id;
-
-        const myProducts = await Product.find({ seller_id: sellerId }).select('_id');
-        const myProductIds = myProducts.map(p => p._id.toString());
-
-        if (myProductIds.length === 0) {
-            return res.status(200).json([]); 
-        }
-
-        const orders = await Order.find({
-            'orderItems.productId': { $in: myProductIds } 
-        }).sort({ createdAt: -1 }).populate('user', 'name email');
-
-        res.status(200).json(orders);
-    } catch (error) {
-        console.error("Lỗi lấy đơn hàng cho Seller:", error);
-        res.status(500).json({ message: "Lỗi Server" });
-    }
-};
 
 exports.cancelOrder = async (req, res) => {
     try {
@@ -292,6 +271,31 @@ exports.cancelOrder = async (req, res) => {
         
         res.status(200).json({ message: "Hủy đơn hàng thành công", order });
     } catch (error) {
+        res.status(500).json({ message: "Lỗi Server" });
+    }
+};
+
+exports.getSellerOrders = async (req, res) => {
+    try {
+        const sellerId = req.user._id || req.user.id;
+
+        const myProducts = await Product.find({ seller_id: sellerId }).select('_id');
+        const myProductIds = myProducts.map(p => p._id);
+
+        if (myProductIds.length === 0) {
+            return res.status(200).json([]); 
+        }
+
+        const orders = await Order.find({
+            $or: [
+                { 'orderItems.product': { $in: myProductIds } },
+                { 'orderItems.productId': { $in: myProductIds } }
+            ]
+        }).sort({ createdAt: -1 }).populate('user', 'name email');
+
+        res.status(200).json(orders);
+    } catch (error) {
+        console.error("Lỗi lấy đơn hàng cho Seller:", error);
         res.status(500).json({ message: "Lỗi Server" });
     }
 };
