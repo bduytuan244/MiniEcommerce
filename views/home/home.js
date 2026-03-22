@@ -6,14 +6,12 @@ let currentMaxPrice = '';
 let currentBrand = '';
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Kiểm tra URL xem có phản hồi từ VNPAY không
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment');
 
     if (paymentStatus === 'success') {
         Swal.fire('Thành công!', 'Thanh toán qua VNPAY thành công. Đơn hàng của bạn đang được xử lý.', 'success')
         .then(() => {
-            // Xóa url thừa đi cho đẹp
             window.history.replaceState({}, document.title, window.location.pathname);
         });
     } else if (paymentStatus === 'failed') {
@@ -27,9 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.history.replaceState({}, document.title, window.location.pathname);
         });
     }
-});
 
-document.addEventListener('DOMContentLoaded', () => {
     const headerContainer = document.getElementById('header');
     const footerContainer = document.getElementById('footer');
 
@@ -38,21 +34,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof checkLoginState === 'function') checkLoginState();
         
         const userStr = localStorage.getItem('user');
-        console.log("1. Dữ liệu trong LocalStorage:", userStr); 
         
         if (userStr) {
             const user = JSON.parse(userStr);
-            console.log("2. Quyền isSeller của tài khoản này là:", user.isSeller); 
-
             if (user.isSeller === true) {
                 const sellerLink = document.getElementById('link-seller-center');
                 if (sellerLink) {
                     sellerLink.style.display = 'flex'; 
-                    console.log("3. ĐÃ BẬT HIỂN THỊ NÚT KÊNH NGƯỜI BÁN THÀNH CÔNG!");
-                } else {
-                    console.log("3. LỖI: Không tìm thấy ID link-seller-center trong HTML");
                 }
             }
+        }
+
+        const searchInput = document.getElementById('search-keyword');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                applyFilters();
+            });
         }
     });
 
@@ -72,8 +69,8 @@ async function loadProducts() {
     try {
         let url = `http://localhost:5000/api/products?page=${currentPage}&limit=8&sort=${currentSort}`;
 
-        if (currentKeyword) url += `&keyword=${currentKeyword}`;
-        if (currentBrand) url += `&brand=${currentBrand}`;
+        if (currentKeyword) url += `&keyword=${encodeURIComponent(currentKeyword)}`;
+        if (currentBrand) url += `&brand=${encodeURIComponent(currentBrand)}`;
         if (currentMinPrice) url += `&price[gte]=${currentMinPrice}`;
         if (currentMaxPrice) url += `&price[lte]=${currentMaxPrice}`;
 
@@ -138,15 +135,21 @@ function renderPagination(totalPages, page) {
 }
 
 function applyFilters() {
-    currentKeyword = document.getElementById('search-keyword').value.trim();
-    currentSort = document.getElementById('sort-by').value;
-    currentBrand = document.getElementById('filter-brand').value;
-    const priceRange = document.getElementById('filter-price').value;
+    const searchEl = document.getElementById('search-keyword');
+    const sortEl = document.getElementById('sort-by');
+    const brandEl = document.getElementById('filter-brand');
+    const priceEl = document.getElementById('filter-price');
+
+    currentKeyword = searchEl ? searchEl.value.trim() : '';
+    currentSort = sortEl ? sortEl.value : '-createdAt';
+    currentBrand = brandEl ? brandEl.value : '';
+    
+    const priceRange = priceEl ? priceEl.value : '';
 
     if (priceRange) {
-        const [min, max] = priceRange.split('-');
-        currentMinPrice = min;
-        currentMaxPrice = max;
+        const prices = priceRange.split('-');
+        currentMinPrice = prices[0] ? prices[0].trim() : '';
+        currentMaxPrice = prices[1] ? prices[1].trim() : '';
     } else {
         currentMinPrice = '';
         currentMaxPrice = '';
