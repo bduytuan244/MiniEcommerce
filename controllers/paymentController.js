@@ -12,14 +12,17 @@ exports.createPaymentUrl = async (req, res) => {
         let createDate = moment(date).format('YYYYMMDDHHmmss');
         
         let ipAddr = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+        if (ipAddr === '::1' || ipAddr.includes(':')) {
+            ipAddr = '127.0.0.1';
+        }
 
         let tmnCode = process.env.vnp_TmnCode;
         let secretKey = process.env.vnp_HashSecret;
         let vnpUrl = process.env.vnp_Url;
         let returnUrl = process.env.vnp_ReturnUrl;
         
-        let amount = order.totalPrice;
-        let bankCode = '';
+        let amount = Math.round(Number(order.totalPrice) * 100);
+        let bankCode = ''; 
         
         let vnp_Params = {};
         vnp_Params['vnp_Version'] = '2.1.0';
@@ -27,13 +30,15 @@ exports.createPaymentUrl = async (req, res) => {
         vnp_Params['vnp_TmnCode'] = tmnCode;
         vnp_Params['vnp_Locale'] = 'vn';
         vnp_Params['vnp_CurrCode'] = 'VND';
-        vnp_Params['vnp_TxnRef'] = order._id.toString(); 
-        vnp_Params['vnp_OrderInfo'] = 'Thanh toan don hang ' + order._id.toString();
+        
+        vnp_Params['vnp_TxnRef'] = order._id.toString() + '_' + new Date().getTime(); 
+        vnp_Params['vnp_OrderInfo'] = 'Thanh toan don hang';
         vnp_Params['vnp_OrderType'] = 'other';
-        vnp_Params['vnp_Amount'] = amount * 100; 
+        vnp_Params['vnp_Amount'] = amount;
         vnp_Params['vnp_ReturnUrl'] = returnUrl;
         vnp_Params['vnp_IpAddr'] = ipAddr;
         vnp_Params['vnp_CreateDate'] = createDate;
+        
         if(bankCode !== null && bankCode !== ''){
             vnp_Params['vnp_BankCode'] = bankCode;
         }
@@ -68,12 +73,15 @@ exports.vnpayReturn = async (req, res) => {
 
     if(secureHash === signed){
         if(vnp_Params['vnp_ResponseCode'] == '00') {
-            const orderId = vnp_Params['vnp_TxnRef'];
+            const txnRef = vnp_Params['vnp_TxnRef'];
+            const orderId = txnRef.split('_')[0]; 
+            
             await Order.findByIdAndUpdate(orderId, {
                 isPaid: true,
                 paidAt: Date.now(),
                 paymentMethod: 'VNPAY'
             });
+            
             res.redirect('http://127.0.0.1:5500/home/index.html?payment=success'); 
         } else {
             res.redirect('http://127.0.0.1:5500/home/index.html?payment=failed');
