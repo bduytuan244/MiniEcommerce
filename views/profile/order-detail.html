@@ -96,7 +96,7 @@
                 <span id="orderStatus" class="badge">...</span>
             </div>
             <div id="actionContainer">
-                </div>
+            </div>
         </div>
     </div>
 
@@ -168,10 +168,17 @@
                     document.getElementById('totalPrice').innerText = Number(order.totalPrice).toLocaleString('vi-VN') + ' đ';
 
                     const actionContainer = document.getElementById('actionContainer');
+                    
                     if (order.status === 'Chờ xác nhận' || order.status === 'pending') {
                         actionContainer.innerHTML = `
                             <button class="btn-cancel-order" onclick="cancelMyOrder('${order._id}')">
                                 <i class="fa-solid fa-ban"></i> Hủy đơn hàng
+                            </button>
+                        `;
+                    } else if (order.status === 'Đang vận chuyển') {
+                        actionContainer.innerHTML = `
+                            <button onclick="confirmReceive('${order._id}')" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-check-circle"></i> Đã nhận được hàng
                             </button>
                         `;
                     } else {
@@ -185,6 +192,42 @@
 
             fetchOrderDetail();
         });
+
+        window.confirmReceive = async function(orderId) {
+            const result = await Swal.fire({
+                title: 'Xác nhận nhận hàng?',
+                text: "Vui lòng chỉ xác nhận khi bạn đã nhận và kiểm tra hàng thành công. Tiền sẽ được chuyển cho người bán!",
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Tôi đã nhận hàng'
+            });
+
+            if (result.isConfirmed) {
+                const token = localStorage.getItem('token');
+                try {
+                    const res = await fetch(`http://localhost:5000/api/orders/${orderId}/status`, {
+                        method: 'PUT',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}` 
+                        },
+                        body: JSON.stringify({ status: 'Hoàn thành' })
+                    });
+                    
+                    if (res.ok) {
+                        Swal.fire('Cảm ơn bạn!', 'Đơn hàng đã được hoàn thành.', 'success')
+                        .then(() => location.reload());
+                    } else {
+                        const data = await res.json();
+                        Swal.fire('Lỗi', data.message || 'Không thể xác nhận', 'error');
+                    }
+                } catch (error) {
+                    Swal.fire('Lỗi', 'Không kết nối được với máy chủ', 'error');
+                }
+            }
+        };
 
         window.cancelMyOrder = async function(orderId) {
             const result = await Swal.fire({
