@@ -178,10 +178,35 @@ exports.updateOrderStatus = async (req, res) => {
         };
         const newStatus = statusMap[req.body.status] || req.body.status;
 
+        const userId = req.user._id || req.user.id;
+        const isAdmin = req.user.isAdmin;
+        const isSeller = req.user.isSeller;
+        const isOwner = order.user.toString() === userId.toString();
+
+        if (!isAdmin && !isSeller && !isOwner) {
+            return res.status(403).json({ message: "Bạn không có quyền thao tác trên đơn hàng này!" });
+        }
+        if (isOwner && !isAdmin && !isSeller) {
+            if (newStatus !== 'Hoàn thành') {
+                return res.status(403).json({ message: "Người mua chỉ được phép xác nhận Đã nhận hàng!" });
+            }
+            if (order.status !== 'Đang vận chuyển') {
+                return res.status(400).json({ message: "Đơn hàng chưa được giao, không thể xác nhận!" });
+            }
+        }
+
+        if (isSeller && !isAdmin) {
+            if (newStatus !== 'Đang đóng gói' && newStatus !== 'Đang vận chuyển' && newStatus !== 'Đã hủy') {
+                return res.status(403).json({ message: "Người bán chỉ được đóng gói, giao hàng hoặc từ chối đơn!" });
+            }
+            if (order.status === 'Đã hủy' || order.status === 'Hoàn thành') {
+                 return res.status(400).json({ message: "Không thể thao tác trên đơn hàng đã đóng!" });
+            }
+        }
+
         if (order.status === 'Đã hủy') {
             return res.status(400).json({ message: "Đơn hàng này đã bị hủy, không thể thay đổi trạng thái!" });
         }
-
         if (order.status === 'Hoàn thành' && newStatus === 'Đã hủy') {
             return res.status(400).json({ message: "Đơn hàng đã giao thành công, không thể hủy!" });
         }
@@ -203,9 +228,10 @@ exports.updateOrderStatus = async (req, res) => {
         if (newStatus === 'Hoàn thành') {
             order.isDelivered = true;
             order.deliveredAt = Date.now();
-            order.isPaid = true;
+            order.isPaid = true; 
             order.paidAt = Date.now();
         }
+        
         await order.save();
         res.json({ message: "Cập nhật thành công", order });
     } catch (error) { res.status(500).json({ message: error.message }); }
