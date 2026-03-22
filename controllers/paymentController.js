@@ -20,7 +20,6 @@ exports.createPaymentUrl = async (req, res) => {
         let vnpUrl = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
         let returnUrl = 'http://localhost:5000/api/payment/vnpay_return';
         
-        // VNPAY yêu cầu số tiền nhân 100 và KHÔNG ĐƯỢC chứa số thập phân
         let amount = Math.floor(Number(order.totalPrice || 0) * 100);
         
         let vnp_Params = {};
@@ -30,10 +29,8 @@ exports.createPaymentUrl = async (req, res) => {
         vnp_Params['vnp_Locale'] = 'vn';
         vnp_Params['vnp_CurrCode'] = 'VND';
         
-        // Nối thẳng ID MongoDB (24 ký tự) với Timestamp, KHÔNG DÙNG KÝ TỰ ĐẶC BIỆT
         vnp_Params['vnp_TxnRef'] = order._id.toString() + date.getTime().toString(); 
         
-        // Bỏ qua toàn bộ dấu cách để an toàn tuyệt đối
         vnp_Params['vnp_OrderInfo'] = 'ThanhToanDonHangVNPAY';
         vnp_Params['vnp_OrderType'] = 'other';
         vnp_Params['vnp_Amount'] = amount;
@@ -41,14 +38,12 @@ exports.createPaymentUrl = async (req, res) => {
         vnp_Params['vnp_IpAddr'] = ipAddr;
         vnp_Params['vnp_CreateDate'] = createDate;
 
-        // Tự tay sort object chuẩn VNPAY
         let sortedParams = {};
         let keys = Object.keys(vnp_Params).sort();
         for (let i = 0; i < keys.length; i++) {
             sortedParams[keys[i]] = encodeURIComponent(vnp_Params[keys[i]]).replace(/%20/g, '+');
         }
 
-        // Tự tay nối chuỗi tạo chữ ký
         let signData = [];
         for (let key in sortedParams) {
             signData.push(key + '=' + sortedParams[key]);
@@ -58,7 +53,6 @@ exports.createPaymentUrl = async (req, res) => {
         let hmac = crypto.createHmac("sha512", secretKey);
         let signed = hmac.update(new Buffer.from(signString, 'utf-8')).digest("hex"); 
         
-        // Hoàn thiện URL
         let finalUrl = vnpUrl + '?' + signString + '&vnp_SecureHash=' + signed;
 
         res.status(200).json({ url: finalUrl });
@@ -92,7 +86,6 @@ exports.vnpayReturn = async (req, res) => {
     if(secureHash === signed){
         if(vnp_Params['vnp_ResponseCode'] == '00') {
             const txnRef = vnp_Params['vnp_TxnRef'];
-            // Cắt lấy đúng 24 ký tự đầu (Chính là ID đơn hàng trong MongoDB)
             const orderId = txnRef.substring(0, 24); 
             
             await Order.findByIdAndUpdate(orderId, {
