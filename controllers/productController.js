@@ -18,12 +18,13 @@ exports.createProduct = async (req, res) => {
         return res.status(400).json({ message: "Vui lòng tải lên ít nhất 1 ảnh sản phẩm" });
     }
 
-    const actualStock = stock !== undefined ? stock : (countInStock || 0);
+    const actualStock = countInStock !== undefined ? countInStock : (stock || 0);
 
     const newProduct = new Product({
       name, 
       price, 
       countInStock: actualStock, 
+      stock: actualStock,       
       category,
       brand, 
       description,
@@ -134,9 +135,11 @@ exports.updateProduct = async (req, res) => {
     if (req.user.isAdmin || product.seller_id.toString() === userId.toString()) {
         
         let updateData = { ...req.body };
-        if (updateData.stock !== undefined) {
-            updateData.countInStock = updateData.stock; 
-            delete updateData.stock; 
+        
+        const actualStock = req.body.countInStock !== undefined ? req.body.countInStock : req.body.stock;
+        if (actualStock !== undefined) {
+            updateData.countInStock = actualStock; 
+            updateData.stock = actualStock; 
         }
 
         const updatedProduct = await Product.findByIdAndUpdate(
