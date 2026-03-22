@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đơn hàng - Seller</title>
+    <title>Quản lý Đơn hàng - Seller</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { margin: 0; font-family: 'Inter', sans-serif; display: flex; height: 100vh; background: #f4f6f9; }
         
-        .sidebar { width: 250px; background: #fff; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; z-index: 10;}
+        .sidebar { width: 250px; background: #fff; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column;}
         .sidebar h2 { text-align: center; padding: 20px 0; margin: 0; color: #ee4d2d; font-size: 1.3rem; border-bottom: 1px solid #eee;}
         .menu { list-style: none; padding: 0; margin: 0; flex: 1; }
         .menu a { display: flex; align-items: center; gap: 10px; padding: 15px 20px; color: #555; text-decoration: none; font-weight: 500;}
-        .menu a.active { background: #fff1ee; color: #ee4d2d; border-right: 4px solid #ee4d2d; }
+        .menu a:hover, .menu a.active { background: #fff1ee; color: #ee4d2d; border-right: 4px solid #ee4d2d; }
         .logout-btn { padding: 15px; background: #f8f9fa; color: #dc3545; text-align: center; cursor: pointer; border-top: 1px solid #eee;}
 
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -23,51 +23,53 @@
 
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; vertical-align: middle; }
-        th { background: #f8f9fa; color: #555; text-transform: uppercase; font-size: 0.85rem; }
+        th { background: #f8f9fa; color: #555; font-size: 0.85rem; }
         
-        .badge { padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; display: inline-block;}
-        .bg-pending { background: #fff3cd; color: #856404; }
-        .bg-delivered { background: #d4edda; color: #155724; }
-        .bg-cancelled { background: #f8d7da; color: #721c24; }
+        .badge { padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+        .badge-pending { background: #fff3cd; color: #856404; }
+        .badge-processing { background: #cff4fc; color: #055160; }
+        .badge-shipped { background: #cfe2ff; color: #084298; }
+        .badge-completed { background: #d1e7dd; color: #0f5132; }
+        .badge-cancelled { background: #f8d7da; color: #842029; }
+
+        .btn { padding: 8px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s;}
+        .btn-pack { background: #ffc107; color: #000; }
+        .btn-pack:hover { background: #e0a800; }
+        .btn-ship { background: #0d6efd; color: #fff; }
+        .btn-ship:hover { background: #0b5ed7; }
+        .text-muted { color: #6c757d; font-style: italic; font-size: 0.9rem;}
     </style>
 </head>
 <body>
 
     <div class="sidebar">
-        <h2 onclick="window.location.href='../home/index.html'" style="cursor: pointer; transition: 0.2s;" title="Về trang mua sắm">
-            <i class="fa-solid fa-store"></i> SELLER CENTER
-        </h2>
-        
+        <h2 onclick="window.location.href='../home/index.html'" style="cursor: pointer;"><i class="fa-solid fa-store"></i> SELLER CENTER</h2>
         <ul class="menu">
             <li><a href="index.html"><i class="fa-solid fa-chart-line"></i> Bảng điều khiển</a></li>
             <li><a href="products.html"><i class="fa-solid fa-box"></i> Kho sản phẩm</a></li> 
-            <li><a href="orders.html"><i class="fa-solid fa-clipboard-list"></i> Đơn hàng của tôi</a></li>
-            
+            <li><a href="orders.html" class="active"><i class="fa-solid fa-clipboard-list"></i> Đơn hàng của tôi</a></li>
             <li style="margin-top: 15px; border-top: 1px dashed #ddd; padding-top: 5px;">
-                <a href="../home/index.html" style="color: #0d6efd;">
-                    <i class="fa-solid fa-house-user"></i> Về trang mua sắm
-                </a>
+                <a href="../home/index.html" style="color: #0d6efd;"><i class="fa-solid fa-house-user"></i> Về trang mua sắm</a>
             </li>
         </ul>
-        
         <div class="logout-btn" onclick="sellerLogout()">Đăng xuất</div>
     </div>
+
     <div class="main-content">
         <div class="topbar"><h3 style="margin: 0; color: #555;">Quản lý Đơn hàng</h3></div>
-
         <div class="content">
             <h2 style="margin-top: 0;">Đơn hàng chờ xử lý</h2>
             <table>
                 <thead>
                     <tr>
-                        <th>Mã Đơn</th>
+                        <th>Mã đơn</th>
                         <th>Người mua</th>
                         <th>Ngày đặt</th>
-                        <th style="text-align: center;">Trạng thái chung</th>
-                        <th style="text-align: center;">Thông tin</th>
+                        <th style="text-align: center;">Trạng thái</th>
+                        <th style="text-align: center;">Hành động</th>
                     </tr>
                 </thead>
-                <tbody id="order-table-body">
+                <tbody id="seller-orders-body">
                     <tr><td colspan="5" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</td></tr>
                 </tbody>
             </table>
@@ -78,50 +80,79 @@
         const token = localStorage.getItem('token');
         if (!token) window.location.href = '../auth/login.html';
 
-        async function loadSellerOrders() {
+        async function loadOrders() {
             try {
                 const res = await fetch('http://localhost:5000/api/orders/myshop', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                const data = await res.json();
-                const tbody = document.getElementById('order-table-body');
-                
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Shop chưa có đơn hàng nào.</td></tr>';
+                const orders = await res.json();
+                const tbody = document.getElementById('seller-orders-body');
+
+                if (orders.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#666;">Shop chưa có đơn hàng nào.</td></tr>';
                     return;
                 }
 
-                tbody.innerHTML = data.map(order => {
-                    let badgeClass = 'bg-pending';
-                    const status = order.status || 'Chờ xác nhận';
-                    if (status === 'Hoàn thành') badgeClass = 'bg-delivered';
-                    if (status === 'Đã hủy') badgeClass = 'bg-cancelled';
+                tbody.innerHTML = orders.map(order => {
+                    let badgeClass = 'badge-pending';
+                    let actionHtml = '';
+
+                    if (order.status === 'Chờ xác nhận') {
+                        actionHtml = `<button class="btn btn-pack" onclick="changeStatus('${order._id}', 'Đang đóng gói')"><i class="fa-solid fa-box-open"></i> Chuẩn bị hàng</button>`;
+                    } else if (order.status === 'Đang đóng gói') {
+                        badgeClass = 'badge-processing';
+                        actionHtml = `<button class="btn btn-ship" onclick="changeStatus('${order._id}', 'Đang vận chuyển')"><i class="fa-solid fa-truck-fast"></i> Giao cho ĐVVC</button>`;
+                    } else if (order.status === 'Đang vận chuyển') {
+                        badgeClass = 'badge-shipped';
+                        actionHtml = `<span class="text-muted">Đang giao đến khách...</span>`;
+                    } else if (order.status === 'Hoàn thành') {
+                        badgeClass = 'badge-completed';
+                        actionHtml = `<span style="color:#198754; font-weight:bold;"><i class="fa-solid fa-check"></i> Đã hoàn thành</span>`;
+                    } else if (order.status === 'Đã hủy' || order.status === 'Trả hàng') {
+                        badgeClass = 'badge-cancelled';
+                        actionHtml = `<span style="color:#dc3545; font-weight:bold;"><i class="fa-solid fa-ban"></i> Đơn đã hủy</span>`;
+                    }
 
                     return `
                         <tr>
-                            <td style="font-weight:bold; color:#0056b3;">#${order._id.slice(-6).toUpperCase()}</td>
+                            <td style="font-weight:bold; color:#0d6efd;">#${order._id.slice(-6).toUpperCase()}</td>
                             <td>
-                                <div>${order.customerName || (order.user ? order.user.name : 'Khách')}</div>
-                                <small style="color:#888">${order.phone || ''}</small>
+                                <div>${order.customerName || (order.user && order.user.name) || 'N/A'}</div>
+                                <small style="color:#666;">${order.phone || ''}</small>
                             </td>
                             <td>${new Date(order.createdAt).toLocaleDateString('vi-VN')}</td>
-                            <td style="text-align: center;"><span class="badge ${badgeClass}">${status}</span></td>
-                            <td style="text-align: center;">
-                                <button onclick="Swal.fire('Chi tiết', 'Vui lòng chuẩn bị hàng và giao cho vận chuyển.', 'info')" 
-                                    style="padding: 6px 12px; background: #ee4d2d; color: white; border: none; border-radius: 4px; cursor:pointer;">
-                                    Chuẩn bị hàng
-                                </button>
-                            </td>
+                            <td style="text-align: center;"><span class="badge ${badgeClass}">${order.status}</span></td>
+                            <td style="text-align: center;">${actionHtml}</td>
                         </tr>
                     `;
                 }).join('');
             } catch (error) {
-                Swal.fire('Lỗi', 'Không thể tải đơn hàng!', 'error');
+                Swal.fire('Lỗi', 'Không tải được đơn hàng', 'error');
             }
         }
 
-        function sellerLogout() { localStorage.removeItem('token'); window.location.href = '../auth/login.html'; }
-        loadSellerOrders();
+        async function changeStatus(orderId, newStatus) {
+            try {
+                const res = await fetch(`http://localhost:5000/api/orders/${orderId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                if (res.ok) {
+                    Swal.fire({ title: 'Thành công', icon: 'success', timer: 1500, showConfirmButton: false });
+                    loadOrders(); 
+                } else {
+                    const data = await res.json();
+                    Swal.fire('Lỗi', data.message, 'error');
+                }
+            } catch (error) {
+                Swal.fire('Lỗi', 'Lỗi kết nối máy chủ', 'error');
+            }
+        }
+
+        function sellerLogout() { localStorage.clear(); window.location.href = '../auth/login.html'; }
+        loadOrders();
     </script>
 </body>
 </html>
