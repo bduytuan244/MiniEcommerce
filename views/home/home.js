@@ -6,6 +6,30 @@ let currentMaxPrice = '';
 let currentBrand = '';
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Kiểm tra URL xem có phản hồi từ VNPAY không
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+
+    if (paymentStatus === 'success') {
+        Swal.fire('Thành công!', 'Thanh toán qua VNPAY thành công. Đơn hàng của bạn đang được xử lý.', 'success')
+        .then(() => {
+            // Xóa url thừa đi cho đẹp
+            window.history.replaceState({}, document.title, window.location.pathname);
+        });
+    } else if (paymentStatus === 'failed') {
+        Swal.fire('Lỗi', 'Giao dịch bị hủy hoặc thanh toán thất bại!', 'error')
+        .then(() => {
+            window.history.replaceState({}, document.title, window.location.pathname);
+        });
+    } else if (paymentStatus === 'invalid') {
+        Swal.fire('Cảnh báo', 'Dữ liệu giao dịch không hợp lệ!', 'warning')
+        .then(() => {
+            window.history.replaceState({}, document.title, window.location.pathname);
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
     const headerContainer = document.getElementById('header');
     const footerContainer = document.getElementById('footer');
 
