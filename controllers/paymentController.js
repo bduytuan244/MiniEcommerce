@@ -1,6 +1,4 @@
 const crypto = require('crypto');
-const querystring = require('querystring');
-const moment = require('moment');
 const Order = require('../models/Order');
 
 exports.createPaymentUrl = async (req, res) => {
@@ -9,20 +7,21 @@ exports.createPaymentUrl = async (req, res) => {
         if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
 
         let date = new Date();
-        let createDate = moment(date).format('YYYYMMDDHHmmss');
+        let createDate = date.getFullYear() +
+            ('0' + (date.getMonth() + 1)).slice(-2) +
+            ('0' + date.getDate()).slice(-2) +
+            ('0' + date.getHours()).slice(-2) +
+            ('0' + date.getMinutes()).slice(-2) +
+            ('0' + date.getSeconds()).slice(-2);
         
-        let ipAddr = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
-        if (ipAddr === '::1' || ipAddr.includes(':')) {
-            ipAddr = '127.0.0.1';
-        }
-
-        let tmnCode = process.env.vnp_TmnCode;
-        let secretKey = process.env.vnp_HashSecret;
-        let vnpUrl = process.env.vnp_Url;
-        let returnUrl = process.env.vnp_ReturnUrl;
+        let ipAddr = '127.0.0.1'; 
+        let tmnCode = 'CGXZLS0Z';
+        let secretKey = 'XNBCJFAKAZQSGTARRLGCHVZWCIOIGSHN';
+        let vnpUrl = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
+        let returnUrl = 'http://localhost:5000/api/payment/vnpay_return';
         
-        let amount = Math.round(Number(order.totalPrice) * 100);
-        let bankCode = ''; 
+        // VNPAY yêu cầu số tiền nhân 100 và KHÔNG ĐƯỢC chứa số thập phân
+        let amount = Math.floor(Number(order.totalPrice || 0) * 100);
         
         let vnp_Params = {};
         vnp_Params['vnp_Version'] = '2.1.0';
@@ -31,27 +30,38 @@ exports.createPaymentUrl = async (req, res) => {
         vnp_Params['vnp_Locale'] = 'vn';
         vnp_Params['vnp_CurrCode'] = 'VND';
         
-        vnp_Params['vnp_TxnRef'] = order._id.toString() + '_' + new Date().getTime(); 
-        vnp_Params['vnp_OrderInfo'] = 'Thanh toan don hang';
+        // Nối thẳng ID MongoDB (24 ký tự) với Timestamp, KHÔNG DÙNG KÝ TỰ ĐẶC BIỆT
+        vnp_Params['vnp_TxnRef'] = order._id.toString() + date.getTime().toString(); 
+        
+        // Bỏ qua toàn bộ dấu cách để an toàn tuyệt đối
+        vnp_Params['vnp_OrderInfo'] = 'ThanhToanDonHangVNPAY';
         vnp_Params['vnp_OrderType'] = 'other';
         vnp_Params['vnp_Amount'] = amount;
         vnp_Params['vnp_ReturnUrl'] = returnUrl;
         vnp_Params['vnp_IpAddr'] = ipAddr;
         vnp_Params['vnp_CreateDate'] = createDate;
-        
-        if(bankCode !== null && bankCode !== ''){
-            vnp_Params['vnp_BankCode'] = bankCode;
+
+        // Tự tay sort object chuẩn VNPAY
+        let sortedParams = {};
+        let keys = Object.keys(vnp_Params).sort();
+        for (let i = 0; i < keys.length; i++) {
+            sortedParams[keys[i]] = encodeURIComponent(vnp_Params[keys[i]]).replace(/%20/g, '+');
         }
 
-        vnp_Params = sortObject(vnp_Params);
+        // Tự tay nối chuỗi tạo chữ ký
+        let signData = [];
+        for (let key in sortedParams) {
+            signData.push(key + '=' + sortedParams[key]);
+        }
+        let signString = signData.join('&');
 
-        let signData = querystring.stringify(vnp_Params, { encode: false });
         let hmac = crypto.createHmac("sha512", secretKey);
-        let signed = hmac.update(new Buffer.from(signData, 'utf-8')).digest("hex"); 
-        vnp_Params['vnp_SecureHash'] = signed;
-        vnpUrl += '?' + querystring.stringify(vnp_Params, { encode: false });
+        let signed = hmac.update(new Buffer.from(signString, 'utf-8')).digest("hex"); 
+        
+        // Hoàn thiện URL
+        let finalUrl = vnpUrl + '?' + signString + '&vnp_SecureHash=' + signed;
 
-        res.status(200).json({ url: vnpUrl });
+        res.status(200).json({ url: finalUrl });
     } catch (error) {
         res.status(500).json({ message: "Lỗi tạo link thanh toán", error: error.message });
     }
@@ -64,24 +74,32 @@ exports.vnpayReturn = async (req, res) => {
     delete vnp_Params['vnp_SecureHash'];
     delete vnp_Params['vnp_SecureHashType'];
 
-    vnp_Params = sortObject(vnp_Params);
+    let sortedParams = {};
+    let keys = Object.keys(vnp_Params).sort();
+    for (let i = 0; i < keys.length; i++) {
+        sortedParams[keys[i]] = encodeURIComponent(vnp_Params[keys[i]]).replace(/%20/g, '+');
+    }
 
-    let secretKey = process.env.vnp_HashSecret;
-    let signData = querystring.stringify(vnp_Params, { encode: false });
+    let secretKey = 'XNBCJFAKAZQSGTARRLGCHVZWCIOIGSHN';
+    let signData = [];
+    for (let key in sortedParams) {
+        signData.push(key + '=' + sortedParams[key]);
+    }
+    let signString = signData.join('&');
     let hmac = crypto.createHmac("sha512", secretKey);
-    let signed = hmac.update(new Buffer.from(signData, 'utf-8')).digest("hex");     
+    let signed = hmac.update(new Buffer.from(signString, 'utf-8')).digest("hex");     
 
     if(secureHash === signed){
         if(vnp_Params['vnp_ResponseCode'] == '00') {
             const txnRef = vnp_Params['vnp_TxnRef'];
-            const orderId = txnRef.split('_')[0]; 
+            // Cắt lấy đúng 24 ký tự đầu (Chính là ID đơn hàng trong MongoDB)
+            const orderId = txnRef.substring(0, 24); 
             
             await Order.findByIdAndUpdate(orderId, {
                 isPaid: true,
                 paidAt: Date.now(),
                 paymentMethod: 'VNPAY'
             });
-            
             res.redirect('http://127.0.0.1:5500/home/index.html?payment=success'); 
         } else {
             res.redirect('http://127.0.0.1:5500/home/index.html?payment=failed');
@@ -90,17 +108,3 @@ exports.vnpayReturn = async (req, res) => {
         res.redirect('http://127.0.0.1:5500/home/index.html?payment=invalid');
     }
 };
-
-function sortObject(obj) {
-	let sorted = {};
-	let str = [];
-	let key;
-	for (key in obj){
-		if (obj.hasOwnProperty(key)) { str.push(encodeURIComponent(key)); }
-	}
-	str.sort();
-    for (key = 0; key < str.length; key++) {
-        sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, "+");
-    }
-    return sorted;
-}
