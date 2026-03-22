@@ -63,20 +63,22 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
         btnSubmit.disabled = true;
 
+        const paymentMethod = document.getElementById('paymentMethod').value;
+        
         const orderData = {
             orderItems: cart,
             shippingInfo: {
                 address: document.getElementById('shippingAddress').value,
                 phone: document.getElementById('shippingPhone').value
             },
-            paymentMethod: document.getElementById('paymentMethod').value,
+            paymentMethod: paymentMethod,
             totalPrice: finalTotalToPay 
         };
 
         try {
             const res = await fetch('http://localhost:5000/api/orders', {
                 method: 'POST',
-                headers: typeof getAuthHeaders === 'function' ? getAuthHeaders() : {
+                headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 }, 
@@ -86,18 +88,39 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
 
             if (res.ok) {
-                Swal.fire({
-                    title: '🎉 Đặt hàng thành công!',
-                    text: 'Cảm ơn bạn đã tin tưởng mua sắm tại Mini Shop. Chúng tôi đã gửi email xác nhận cho bạn.',
-                    icon: 'success',
-                    confirmButtonColor: '#ee4d2d',
-                    confirmButtonText: 'Xem lịch sử đơn hàng',
-                    allowOutsideClick: false
-                }).then(() => {
-                    localStorage.removeItem('cart');
-                    localStorage.removeItem('cartTotal');
-                    window.location.href = '../profile/profile.html'; 
-                });
+                localStorage.removeItem('cart');
+                localStorage.removeItem('cartTotal');
+                
+                if (paymentMethod === 'VNPAY') {
+                    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang chuyển sang VNPAY...';
+                    
+                    const vnPayRes = await fetch(`http://localhost:5000/api/payment/create_payment_url/${data._id}`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    const vnPayData = await vnPayRes.json();
+                    
+                    if (vnPayRes.ok && vnPayData.url) {
+                        window.location.href = vnPayData.url; 
+                    } else {
+                        Swal.fire('Lỗi', 'Không thể tạo link VNPAY. Vui lòng thanh toán sau trong trang Chi tiết đơn hàng!', 'error')
+                        .then(() => window.location.href = '../profile/profile.html');
+                    }
+
+                } else {
+                    Swal.fire({
+                        title: '🎉 Đặt hàng thành công!',
+                        text: 'Cảm ơn bạn đã tin tưởng mua sắm tại Mini Shop. Chúng tôi đã gửi email xác nhận cho bạn.',
+                        icon: 'success',
+                        confirmButtonColor: '#ee4d2d',
+                        confirmButtonText: 'Xem lịch sử đơn hàng',
+                        allowOutsideClick: false
+                    }).then(() => {
+                        window.location.href = '../profile/profile.html'; 
+                    });
+                }
+
             } else {
                 Swal.fire('Lỗi đặt hàng', data.message, 'error');
                 btnSubmit.innerHTML = '<i class="fa-solid fa-check"></i> Hoàn tất đặt hàng';
