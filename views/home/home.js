@@ -11,19 +11,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (paymentStatus === 'success') {
         Swal.fire('Thành công!', 'Thanh toán qua VNPAY thành công. Đơn hàng của bạn đang được xử lý.', 'success')
-        .then(() => {
-            window.history.replaceState({}, document.title, window.location.pathname);
-        });
+        .then(() => window.history.replaceState({}, document.title, window.location.pathname));
     } else if (paymentStatus === 'failed') {
         Swal.fire('Lỗi', 'Giao dịch bị hủy hoặc thanh toán thất bại!', 'error')
-        .then(() => {
-            window.history.replaceState({}, document.title, window.location.pathname);
-        });
+        .then(() => window.history.replaceState({}, document.title, window.location.pathname));
     } else if (paymentStatus === 'invalid') {
         Swal.fire('Cảnh báo', 'Dữ liệu giao dịch không hợp lệ!', 'warning')
-        .then(() => {
-            window.history.replaceState({}, document.title, window.location.pathname);
-        });
+        .then(() => window.history.replaceState({}, document.title, window.location.pathname));
     }
 
     const headerContainer = document.getElementById('header');
@@ -34,14 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof checkLoginState === 'function') checkLoginState();
         
         const userStr = localStorage.getItem('user');
-        
         if (userStr) {
             const user = JSON.parse(userStr);
             if (user.isSeller === true) {
                 const sellerLink = document.getElementById('link-seller-center');
-                if (sellerLink) {
-                    sellerLink.style.display = 'flex'; 
-                }
+                if (sellerLink) sellerLink.style.display = 'flex'; 
             }
         }
 
@@ -57,8 +48,28 @@ document.addEventListener('DOMContentLoaded', () => {
         footerContainer.innerHTML = html;
     });
 
-    loadProducts();
+    loadBrands();
+    loadProducts(); 
 });
+
+async function loadBrands() {
+    try {
+        const res = await fetch('http://localhost:5000/api/products?limit=1000');
+        const data = await res.json();
+        
+        if (data.products && data.products.length > 0) {
+            const uniqueBrands = [...new Set(data.products.map(p => p.brand).filter(b => b))];
+            
+            const brandSelect = document.getElementById('filter-brand');
+            if (brandSelect) {
+                brandSelect.innerHTML = '<option value="">Thương hiệu (Tất cả)</option>' + 
+                    uniqueBrands.map(brand => `<option value="${brand}">${brand}</option>`).join('');
+            }
+        }
+    } catch (error) {
+        console.error('Lỗi tải danh sách thương hiệu:', error);
+    }
+}
 
 async function loadProducts() {
     const productList = document.getElementById('product-list');
@@ -71,8 +82,9 @@ async function loadProducts() {
 
         if (currentKeyword) url += `&keyword=${encodeURIComponent(currentKeyword)}`;
         if (currentBrand) url += `&brand=${encodeURIComponent(currentBrand)}`;
-        if (currentMinPrice) url += `&price[gte]=${currentMinPrice}`;
-        if (currentMaxPrice) url += `&price[lte]=${currentMaxPrice}`;
+        
+        if (currentMinPrice) url += `&minPrice=${currentMinPrice}&price[gte]=${currentMinPrice}`;
+        if (currentMaxPrice) url += `&maxPrice=${currentMaxPrice}&price[lte]=${currentMaxPrice}`;
 
         const res = await fetch(url);
         const data = await res.json();
