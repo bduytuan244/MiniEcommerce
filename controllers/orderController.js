@@ -4,118 +4,144 @@ const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
 
 exports.createOrder = async (req, res) => {
-  try {
-    const { orderItems, shippingInfo, paymentMethod, totalPrice } = req.body;
-
-    if (!orderItems || orderItems.length === 0) {
-      return res.status(400).json({ message: "Giỏ hàng rỗng" });
-    }
-
-    if (!shippingInfo || !shippingInfo.address || !shippingInfo.phone) {
-        return res.status(400).json({ message: "Thiếu địa chỉ hoặc số điện thoại" });
-    }
-
-    const orderItemsProcessed = [];
-    let calculatedTotalPrice = 0; 
-
-    for (const item of orderItems) {
-      const productId = item.productId || item.product;
-      const dbProduct = await Product.findById(productId);
-
-      if (!dbProduct) {
-        return res.status(404).json({ message: `Sản phẩm ID ${productId} không tồn tại` });
-      }
-
-      const itemTotalPrice = dbProduct.price * item.qty;
-      calculatedTotalPrice += itemTotalPrice;
-
-      orderItemsProcessed.push({
-        product: dbProduct._id,
-        name: dbProduct.name,
-        price: dbProduct.price,
-        image: dbProduct.images && dbProduct.images[0] ? dbProduct.images[0] : '', 
-        qty: item.qty
-      });
-    }
-    const finalPrice = totalPrice ? Number(totalPrice) : calculatedTotalPrice;
-    const order = new Order({
-      orderItems: orderItemsProcessed,
-      user: req.user._id || req.user.id,
-      customerName: req.user.name || shippingInfo.fullName || "Khách hàng",
-      address: shippingInfo.address,
-      phone: shippingInfo.phone,
-      paymentMethod,
-      itemsPrice: calculatedTotalPrice, 
-      shippingPrice: 0,
-      totalPrice: finalPrice, 
-      isPaid: false,
-      status: 'Chờ xác nhận'
-    });
-
-    const createdOrder = await order.save();
-
     try {
-        const userDetail = await User.findById(req.user._id || req.user.id);
-        const emailToSend = userDetail ? userDetail.email : req.user.email;
-        const nameToSend = userDetail ? userDetail.name : req.user.name;
+        const { orderItems, shippingInfo, paymentMethod, totalPrice } = req.body;
 
-        if (emailToSend && typeof sendEmail === 'function') {
-            const itemsHtml = orderItemsProcessed.map(item => `
-                <tr>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${item.name}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${item.qty}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${(item.price * item.qty).toLocaleString('vi-VN')} đ</td>
-                </tr>
-            `).join('');
-
-            const emailHtmlTemplate = `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 8px;">
-                    <h2 style="color: #28a745; text-align: center;">Cảm ơn bạn đã đặt hàng! 🎉</h2>
-                    <p>Xin chào <strong>${nameToSend}</strong>,</p>
-                    <p>Chúng tôi đã nhận được đơn hàng <strong>#${createdOrder._id.toString().slice(-6).toUpperCase()}</strong> của bạn và đang tiến hành xử lý.</p>
-                    
-                    <h3 style="border-bottom: 2px solid #eee; padding-bottom: 5px;">📦 Chi tiết đơn hàng:</h3>
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                        <thead>
-                            <tr style="background-color: #f8f9fa;">
-                                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Sản phẩm</th>
-                                <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">SL</th>
-                                <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">Thành tiền</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${itemsHtml}
-                        </tbody>
-                    </table>
-                    
-                    <h3 style="text-align: right; color: #d32f2f;">Tổng cộng: ${finalPrice.toLocaleString('vi-VN')} đ</h3>
-                    
-                    <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-top: 20px;">
-                        <p style="margin: 0 0 5px 0;"><strong>📍 Địa chỉ giao hàng:</strong> ${shippingInfo.address}</p>
-                        <p style="margin: 0;"><strong>📞 Số điện thoại:</strong> ${shippingInfo.phone}</p>
-                    </div>
-
-                    <p style="margin-top: 20px; font-size: 0.9em; color: #666; text-align: center;">Bạn có thể đăng nhập vào website để theo dõi trạng thái đơn hàng của mình.</p>
-                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-                    <p style="text-align: center; font-weight: bold; color: #333;">Trân trọng,<br>Ban quản trị Mini Ecommerce</p>
-                </div>
-            `;
-
-            await sendEmail({
-                email: emailToSend,
-                subject: `🎉 Xác nhận đơn hàng #${createdOrder._id.toString().slice(-6).toUpperCase()}`,
-                message: `Xin chào ${nameToSend}, Cảm ơn bạn đã đặt hàng. Tổng tiền: ${finalPrice.toLocaleString('vi-VN')}đ`, 
-                html: emailHtmlTemplate 
-            });
+        if (!orderItems || orderItems.length === 0) {
+            return res.status(400).json({ message: "Giỏ hàng rỗng" });
         }
-    } catch (err) {
-        console.error("Lỗi gửi mail:", err.message);
-    }
 
-    res.status(201).json(createdOrder);
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi tạo đơn: " + error.message });
-  }
+        if (!shippingInfo || !shippingInfo.address || !shippingInfo.phone) {
+            return res.status(400).json({ message: "Thiếu địa chỉ hoặc số điện thoại" });
+        }
+
+        const sellerGroups = {}; 
+        let grandTotalCalculated = 0; 
+
+        for (const item of orderItems) {
+            const productId = item.productId || item.product;
+            const dbProduct = await Product.findById(productId);
+
+            if (!dbProduct) {
+                return res.status(404).json({ message: `Sản phẩm ID ${productId} không tồn tại` });
+            }
+
+            const sellerIdStr = dbProduct.seller_id.toString();
+            const itemTotalPrice = dbProduct.price * item.qty;
+            grandTotalCalculated += itemTotalPrice;
+
+            if (!sellerGroups[sellerIdStr]) {
+                sellerGroups[sellerIdStr] = { items: [], total: 0 };
+            }
+
+            sellerGroups[sellerIdStr].items.push({
+                product: dbProduct._id,
+                name: dbProduct.name,
+                price: dbProduct.price,
+                image: dbProduct.images && dbProduct.images[0] ? dbProduct.images[0] : '', 
+                qty: item.qty
+            });
+            sellerGroups[sellerIdStr].total += itemTotalPrice;
+        }
+
+        const parentTransactionId = 'TXN_' + Date.now(); 
+
+        let discountRatio = 1;
+        if (totalPrice && Number(totalPrice) > 0 && Number(totalPrice) < grandTotalCalculated) {
+            discountRatio = Number(totalPrice) / grandTotalCalculated;
+        }
+
+        const createdOrders = [];
+
+        for (const sellerId in sellerGroups) {
+            const group = sellerGroups[sellerId];
+            
+            const finalGroupPrice = Math.round(group.total * discountRatio);
+
+            const order = new Order({
+                orderItems: group.items,
+                user: req.user._id || req.user.id,
+                customerName: req.user.name || shippingInfo.fullName || "Khách hàng",
+                address: shippingInfo.address,
+                phone: shippingInfo.phone,
+                paymentMethod,
+                itemsPrice: group.total, 
+                shippingPrice: 0,
+                totalPrice: finalGroupPrice, 
+                isPaid: false,
+                status: 'Chờ xác nhận',
+                paymentResult: {
+                    id: parentTransactionId
+                }
+            });
+
+            const savedOrder = await order.save();
+            createdOrders.push(savedOrder);
+        }
+
+        try {
+            const userDetail = await User.findById(req.user._id || req.user.id);
+            const emailToSend = userDetail ? userDetail.email : req.user.email;
+            const nameToSend = userDetail ? userDetail.name : req.user.name;
+
+            if (emailToSend && typeof sendEmail === 'function') {
+                let allItemsHtml = '';
+                createdOrders.forEach(ord => {
+                    ord.orderItems.forEach(item => {
+                        allItemsHtml += `
+                            <tr>
+                                <td style="padding: 10px; border: 1px solid #ddd;">${item.name}</td>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${item.qty}</td>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${(item.price * item.qty).toLocaleString('vi-VN')} đ</td>
+                            </tr>
+                        `;
+                    });
+                });
+
+                const finalPriceToDisplay = totalPrice ? Number(totalPrice) : grandTotalCalculated;
+
+                const emailHtmlTemplate = `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 8px;">
+                        <h2 style="color: #28a745; text-align: center;">Cảm ơn bạn đã đặt hàng! 🎉</h2>
+                        <p>Xin chào <strong>${nameToSend}</strong>,</p>
+                        <p>Chúng tôi đã nhận được yêu cầu đặt hàng của bạn. (Mã phiên: ${parentTransactionId})</p>
+                        
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                            <thead>
+                                <tr style="background-color: #f8f9fa;">
+                                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Sản phẩm</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">SL</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>${allItemsHtml}</tbody>
+                        </table>
+                        
+                        <h3 style="text-align: right; color: #d32f2f;">Tổng cộng: ${finalPriceToDisplay.toLocaleString('vi-VN')} đ</h3>
+                    </div>
+                `;
+
+                await sendEmail({
+                    email: emailToSend,
+                    subject: `🎉 Xác nhận đặt hàng thành công tại Mini Ecommerce`,
+                    message: `Xin chào ${nameToSend}, Cảm ơn bạn đã đặt hàng.`, 
+                    html: emailHtmlTemplate 
+                });
+            }
+        } catch (err) {
+            console.error("Lỗi gửi mail:", err.message);
+        }
+
+        res.status(201).json({ 
+            message: "Tạo đơn thành công", 
+            orders: createdOrders,
+            _id: createdOrders[0]._id,
+            transactionId: parentTransactionId 
+        });
+
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi tạo đơn: " + error.message });
+    }
 };
 
 exports.getOrders = async (req, res) => {

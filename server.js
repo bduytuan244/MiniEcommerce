@@ -19,14 +19,21 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const couponRoutes = require('./routes/couponRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const uploadRoutes = require('./routes/uploadRoutes'); 
 
 const app = express();
 
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+}));
+
+app.use(express.json());
+
 app.use(express.static(path.join(__dirname, 'views')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-app.use(cors());
-app.use(express.json());
 
 app.get('/', (req, res) => {
   res.redirect('/home/index.html');
@@ -40,7 +47,9 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/coupons', couponRoutes);
-app.use('/api/upload', require('./routes/uploadRoutes'));
+app.use('/api/payment', paymentRoutes);
+app.use('/api/upload', uploadRoutes);
+
 app.use(errorHandler);
 
 mongoose.connect(process.env.MONGO_URI)
@@ -48,7 +57,7 @@ mongoose.connect(process.env.MONGO_URI)
     console.log('Kết nối MongoDB thành công');
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {
-      console.log(`Server chạy tại http://localhost:${PORT}`);
+      console.log(`Server chạy tại cổng ${PORT}`);
     });
   })
   .catch((err) => {
