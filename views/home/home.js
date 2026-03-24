@@ -83,8 +83,8 @@ async function loadProducts() {
         if (currentKeyword) url += `&keyword=${encodeURIComponent(currentKeyword)}`;
         if (currentBrand) url += `&brand=${encodeURIComponent(currentBrand)}`;
         
-        if (currentMinPrice) url += `&minPrice=${currentMinPrice}&price[gte]=${currentMinPrice}`;
-        if (currentMaxPrice) url += `&maxPrice=${currentMaxPrice}&price[lte]=${currentMaxPrice}`;
+        if (currentMinPrice) url += `&minPrice=${currentMinPrice}`;
+        if (currentMaxPrice) url += `&maxPrice=${currentMaxPrice}`;
 
         const res = await fetch(url);
         const data = await res.json();

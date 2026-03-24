@@ -42,22 +42,24 @@ exports.createProduct = async (req, res) => {
 
 exports.getProducts = async (req, res) => {
   try {
-    const queryObj = { ...req.query };
-    
-    const excludedFields = ['page', 'sort', 'limit', 'fields', 'keyword'];
-    excludedFields.forEach(el => delete queryObj[el]);
+    let queryConditions = {};
 
-    let queryStr = JSON.stringify(queryObj);
-    queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
-    
-    let queryConditions = JSON.parse(queryStr);
-    
     if (req.query.keyword) {
-        queryConditions.name = { $regex: `^${req.query.keyword}`, $options: 'i' };
+        queryConditions.name = { $regex: req.query.keyword, $options: 'i' };
     }
-    
+
     if (req.query.brand) {
         queryConditions.brand = { $regex: `^${req.query.brand}$`, $options: 'i' };
+    }
+
+    if (req.query.minPrice || req.query.maxPrice) {
+        queryConditions.price = {};
+        if (req.query.minPrice) {
+            queryConditions.price.$gte = parseInt(req.query.minPrice);
+        }
+        if (req.query.maxPrice) {
+            queryConditions.price.$lte = parseInt(req.query.maxPrice);
+        }
     }
 
     let query = Product.find(queryConditions);
@@ -67,13 +69,6 @@ exports.getProducts = async (req, res) => {
       query = query.sort(sortBy);
     } else {
       query = query.sort('-createdAt'); 
-    }
-
-    if (req.query.fields) {
-      const fields = req.query.fields.split(',').join(' ');
-      query = query.select(fields);
-    } else {
-      query = query.select('-__v'); 
     }
 
     const page = req.query.page * 1 || 1; 
