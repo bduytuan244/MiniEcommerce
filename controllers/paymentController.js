@@ -3,8 +3,25 @@ const Order = require('../models/Order');
 
 exports.createPaymentUrl = async (req, res) => {
     try {
-        const order = await Order.findById(req.params.id);
-        if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+        const orderId = req.params.id;
+        const triggerOrder = await Order.findById(orderId);
+        if (!triggerOrder) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+
+        let ordersToPay = [];
+        let transactionId = '';
+
+        if (triggerOrder.paymentResult && triggerOrder.paymentResult.id && triggerOrder.paymentResult.id.startsWith('TXN_')) {
+            transactionId = triggerOrder.paymentResult.id;
+            ordersToPay = await Order.find({ 'paymentResult.id': transactionId });
+        } else {
+            transactionId = triggerOrder._id.toString();
+            ordersToPay = [triggerOrder];
+        }
+
+        let totalAmountToPay = 0;
+        ordersToPay.forEach(o => {
+            totalAmountToPay += Number(o.totalPrice || 0);
+        });
 
         let date = new Date();
         let createDate = date.getFullYear() +
@@ -20,7 +37,7 @@ exports.createPaymentUrl = async (req, res) => {
         let vnpUrl = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
         let returnUrl = 'http://localhost:5000/api/payment/vnpay_return';
         
-        let amount = Math.floor(Number(order.totalPrice || 0) * 100);
+        let amount = Math.floor(totalAmountToPay * 100);
         
         let vnp_Params = {};
         vnp_Params['vnp_Version'] = '2.1.0';
@@ -29,7 +46,7 @@ exports.createPaymentUrl = async (req, res) => {
         vnp_Params['vnp_Locale'] = 'vn';
         vnp_Params['vnp_CurrCode'] = 'VND';
         
-        vnp_Params['vnp_TxnRef'] = order._id.toString() + date.getTime().toString(); 
+        vnp_Params['vnp_TxnRef'] = transactionId + '-' + date.getTime().toString(); 
         
         vnp_Params['vnp_OrderInfo'] = 'ThanhToanDonHangVNPAY';
         vnp_Params['vnp_OrderType'] = 'other';
@@ -86,13 +103,27 @@ exports.vnpayReturn = async (req, res) => {
     if(secureHash === signed){
         if(vnp_Params['vnp_ResponseCode'] == '00') {
             const txnRef = vnp_Params['vnp_TxnRef'];
-            const orderId = txnRef.substring(0, 24); 
+            const refId = txnRef.split('-')[0];
             
-            await Order.findByIdAndUpdate(orderId, {
-                isPaid: true,
-                paidAt: Date.now(),
-                paymentMethod: 'VNPAY'
-            });
+            if (refId.startsWith('TXN_')) {
+                await Order.updateMany(
+                    { 'paymentResult.id': refId },
+                    {
+                        $set: {
+                            isPaid: true,
+                            paidAt: Date.now(),
+                            paymentMethod: 'VNPAY'
+                        }
+                    }
+                );
+            } else {
+                await Order.findByIdAndUpdate(refId, {
+                    isPaid: true,
+                    paidAt: Date.now(),
+                    paymentMethod: 'VNPAY'
+                });
+            }
+            
             res.redirect('http://127.0.0.1:5500/home/index.html?payment=success'); 
         } else {
             res.redirect('http://127.0.0.1:5500/home/index.html?payment=failed');
