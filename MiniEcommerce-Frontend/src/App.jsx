@@ -1,25 +1,43 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
+import Home from './pages/Home';
 import Login from './pages/Login';
+import Register from './pages/Register';
+import ProductDetail from './pages/ProductDetail';
+import Cart from './pages/Cart';
+import VerifyOTP from './pages/VerifyOTP';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import Profile from './pages/Profile';
+import OrderDetail from './pages/OrderDetail';
 
-const Cart = () => <div style={{padding: '20px'}}><h1>Giỏ Hàng</h1></div>;
-const ProductDetail = () => <div style={{padding: '20px'}}><h1>Chi Tiết Sản Phẩm</h1></div>;
+const SellerDummy = () => <div style={{padding: '50px', textAlign: 'center'}}><h1>Kênh người bán (Sắp ra mắt)</h1></div>;
 
 function App() {
   return (
-    <Router>
-      <Header /> 
+    <BrowserRouter>
+      <Header />
 
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
+      <div style={{ paddingTop: '70px', minHeight: '80vh' }}>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/cart" element={<Cart />} />
           <Route path="/product/:id" element={<ProductDetail />} />
+          
+          <Route path="/cart" element={<Cart />} />
+          
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/verify-otp" element={<VerifyOTP />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/order/:id" element={<OrderDetail />} />
+          
+          <Route path="/seller" element={<SellerDummy />} />
         </Routes>
       </div>
-    </Router>
+    </BrowserRouter>
   );
 }
 

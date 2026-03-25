@@ -175,8 +175,7 @@ exports.forgotPassword = async (req, res) => {
     
     await user.save({ validateBeforeSave: false });
 
-    const resetUrl = `http://localhost:5000/auth/reset-password.html?token=${resetToken}`;
-    
+    const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`;    
     try {
       await sendEmail({
         email: user.email,
@@ -197,21 +196,29 @@ exports.forgotPassword = async (req, res) => {
 
 exports.resetPassword = async (req, res) => {
   try {
-    const resetPasswordToken = crypto.createHash('sha256').update(req.params.resetToken).digest('hex');
+    const rawToken = req.query.token || req.params.resetToken;
+    
+    if (!rawToken) {
+      return res.status(400).json({ message: "Không tìm thấy token khôi phục" });
+    }
+
+    const resetPasswordToken = crypto.createHash('sha256').update(rawToken).digest('hex');
     
     const user = await User.findOne({
       resetPasswordToken,
       resetPasswordExpire: { $gt: Date.now() }
     });
 
-    if (!user) return res.status(400).json({ message: "Link khôi phục không hợp lệ hoặc đã hết hạn" });
+    if (!user) {
+      return res.status(400).json({ message: "Link khôi phục không hợp lệ hoặc đã hết hạn" });
+    }
 
     user.password = req.body.password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
     await user.save(); 
 
-    return res.status(200).json({ message: "Đổi mật khẩu thành công! Bạn có thể đăng nhập ngay." });
+    return res.status(200).json({ message: "Đổi mật khẩu thành công!" });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
