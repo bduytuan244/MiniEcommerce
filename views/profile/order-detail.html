@@ -38,6 +38,8 @@
 
         .btn-cancel-order { background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; display: flex; align-items: center; gap: 8px; }
         .btn-cancel-order:hover { background: #bb2d3b; }
+        
+        .btn-review:hover { opacity: 0.8; transform: translateY(-1px); }
     </style>
 </head>
 <body>
@@ -154,15 +156,25 @@
 
                     const itemsHtml = order.orderItems.map(item => `
                         <tr>
-                            <td style="display:flex; align-items:center; gap:15px;">
-                                <img src="${item.image}" width="60" style="border-radius:6px; border: 1px solid #eee;">
-                                <span style="font-weight: 500; color: #333;">${item.name}</span>
+                            <td>
+                                <div style="display:flex; align-items:center; gap:15px;">
+                                    <img src="${item.image}" width="60" style="border-radius:6px; border: 1px solid #eee;">
+                                    <div style="display:flex; flex-direction: column; gap: 8px;">
+                                        <span style="font-weight: 500; color: #333;">${item.name}</span>
+                                        ${order.status === 'Hoàn thành' ? `
+                                            <button onclick="openReviewPopup('${item.product}', '${item.name.replace(/'/g, "\\'")}')" class="btn-review" style="background:#ee4d2d; color:white; padding:5px 12px; border:none; border-radius:4px; cursor:pointer; font-size: 0.85rem; width: fit-content; transition: 0.2s;">
+                                                <i class="fa-solid fa-star"></i> Đánh giá
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                </div>
                             </td>
                             <td>${Number(item.price).toLocaleString('vi-VN')} đ</td>
                             <td style="text-align: center;">${item.qty}</td>
                             <td style="font-weight:bold; color: #333; text-align: right;">${(item.price * item.qty).toLocaleString('vi-VN')} đ</td>
                         </tr>
                     `).join('');
+                    
                     document.getElementById('orderItems').innerHTML = itemsHtml;
 
                     document.getElementById('totalPrice').innerText = Number(order.totalPrice).toLocaleString('vi-VN') + ' đ';
@@ -300,6 +312,73 @@
                 }
             }
         };
+
+        window.openReviewPopup = async function(productId, productName) {
+            const { value: formValues } = await Swal.fire({
+                title: `Đánh giá sản phẩm`,
+                html: `
+                    <p style="font-weight:bold; color:#ee4d2d;">${productName}</p>
+                    <div style="margin-top: 15px; text-align: left;">
+                        <label style="font-weight:600;">Chọn số sao:</label>
+                        <select id="swal-rating" style="width:100%; padding:10px; margin-top:5px; border:1px solid #ccc; border-radius:5px; outline:none;">
+                            <option value="5">⭐⭐⭐⭐⭐ - Tuyệt vời</option>
+                            <option value="4">⭐⭐⭐⭐ - Rất tốt</option>
+                            <option value="3">⭐⭐⭐ - Bình thường</option>
+                            <option value="2">⭐⭐ - Tệ</option>
+                            <option value="1">⭐ - Rất tệ</option>
+                        </select>
+                    </div>
+                    <div style="margin-top: 15px; text-align: left;">
+                        <label style="font-weight:600;">Nhận xét của bạn:</label>
+                        <textarea id="swal-comment" rows="4" style="width:100%; padding:10px; margin-top:5px; border:1px solid #ccc; border-radius:5px; box-sizing:border-box; outline:none;" placeholder="Chia sẻ cảm nhận của bạn về sản phẩm này..."></textarea>
+                    </div>
+                `,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonColor: '#ee4d2d',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Gửi đánh giá',
+                cancelButtonText: 'Hủy',
+                preConfirm: () => {
+                    const comment = document.getElementById('swal-comment').value;
+                    if (!comment.trim()) {
+                        Swal.showValidationMessage('Vui lòng nhập nhận xét của bạn!');
+                        return false;
+                    }
+                    return {
+                        rating: document.getElementById('swal-rating').value,
+                        comment: comment
+                    }
+                }
+            });
+
+            if (formValues) {
+                try {
+                    const token = localStorage.getItem('token');
+                    const res = await fetch('http://localhost:5000/api/reviews', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            productId: productId,
+                            rating: formValues.rating,
+                            comment: formValues.comment
+                        })
+                    });
+
+                    const data = await res.json();
+                    if (res.ok) {
+                        Swal.fire('Thành công!', data.message, 'success');
+                    } else {
+                        Swal.fire('Opps!', data.message, 'warning'); 
+                    }
+                } catch (error) {
+                    Swal.fire('Lỗi', 'Không thể kết nối tới Server', 'error');
+                }
+            }
+        }
     </script>
 </body>
 </html>
