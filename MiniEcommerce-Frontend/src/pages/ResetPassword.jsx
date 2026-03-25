@@ -36,9 +36,8 @@ const ResetPassword = () => {
     setLoading(true);
 
     try {
-      const res = await axios.put(`http://localhost:5000/api/auth/reset-password/${token}`, { password });
-      
-      Swal.fire({
+        const res = await axios.put(`http://localhost:5000/api/auth/reset-password/${token}`, { password });      
+        Swal.fire({
         title: 'Hoàn tất!',
         text: 'Mật khẩu của bạn đã được thay đổi an toàn.',
         icon: 'success',
