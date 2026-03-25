@@ -67,9 +67,10 @@ const Profile = () => {
         <h3>{user?.name || 'Người dùng'}</h3>
         <p>{user?.email}</p>
         <button className="btn-logout" onClick={confirmLogout}>
-          <i className="fa-solid fa-right-from-bracket"></i> Đăng xuất
+            <i className="fa-solid fa-right-from-bracket"></i> Đăng xuất
         </button>
       </div>
+      
 
       <div className="order-history">
         <h3><i className="fa-solid fa-box-open" style={{ color: '#ee4d2d', marginRight: '8px' }}></i>Đơn hàng của tôi</h3>

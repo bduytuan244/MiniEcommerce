@@ -80,63 +80,76 @@ const OrderDetail = () => {
   if (!order) return <div style={{padding: '50px', textAlign: 'center'}}>Đang tải chi tiết đơn hàng...</div>;
 
   return (
-    <div className="container" style={{marginTop: '20px'}}>
-      <div className="header">
-        <Link to="/profile" className="back-btn"><i className="fa-solid fa-arrow-left"></i> Trở về</Link>
-        <h2 style={{margin:0}}>Mã đơn: <span style={{color: '#ee4d2d'}}>#{order._id.slice(-6).toUpperCase()}</span></h2>
+  <div className="container">
+    <div className="order-detail-header">
+      <Link to="/profile" className="back-btn">
+        <i className="fa-solid fa-arrow-left"></i> Trở về
+      </Link>
+      <h2 style={{ margin: 0 }}>
+        Mã đơn: <span style={{ color: '#ee4d2d' }}>#{order._id.slice(-6).toUpperCase()}</span>
+      </h2>
+    </div>
+
+    <div className="info-grid">
+      <div className="info-box">
+        <h4><i className="fa-solid fa-location-dot" style={{ color: '#ee4d2d' }}></i> Địa chỉ nhận hàng</h4>
+        <p><strong>Người nhận:</strong> {order.customerName || order.user?.name}</p>
+        <p><strong>Địa chỉ:</strong> {order.address || order.shippingAddress?.address}</p>
       </div>
-
-      <div className="info-grid">
-        <div className="info-box">
-          <h4><i className="fa-solid fa-location-dot" style={{color: '#ee4d2d'}}></i> Địa chỉ nhận hàng</h4>
-          <p><b>Người nhận:</b> {order.customerName || order.user?.name}</p>
-          <p><b>Địa chỉ:</b> {order.address || order.shippingAddress?.address}</p>
-        </div>
-        <div className="info-box">
-          <h4><i className="fa-solid fa-circle-info" style={{color: '#ee4d2d'}}></i> Thông tin đơn hàng</h4>
-          <p><b>Ngày đặt:</b> {new Date(order.createdAt).toLocaleString('vi-VN')}</p>
-          <p><b>Trạng thái:</b> {order.isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}</p>
-        </div>
-      </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Sản phẩm</th>
-            <th>Đơn giá</th>
-            <th>Số lượng</th>
-            <th style={{textAlign: 'right'}}>Thành tiền</th>
-          </tr>
-        </thead>
-        <tbody>
-          {order.orderItems.map((item, index) => (
-            <tr key={index}>
-              <td>
-                <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                  <img src={item.image.startsWith('http') ? item.image : `http://localhost:5000${item.image}`} width="50" alt="" />
-                  <div>
-                    <div>{item.name}</div>
-                    {order.status === 'Hoàn thành' && (
-                      <button onClick={() => openReviewPopup(item.product, item.name)} style={{fontSize:'0.7rem', color:'red', border:'1px solid red', background:'none', cursor:'pointer'}}>Đánh giá</button>
-                    )}
-                  </div>
-                </div>
-              </td>
-              <td>{Number(item.price).toLocaleString('vi-VN')} đ</td>
-              <td>{item.qty}</td>
-              <td style={{textAlign: 'right'}}>{(item.price * item.qty).toLocaleString('vi-VN')} đ</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <div style={{marginTop:'20px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <span className={`badge ${order.status === 'Hoàn thành' ? 'status-completed' : 'status-pending'}`}>{order.status}</span>
-        {order.status === 'Chờ xác nhận' && (
-          <button className="btn-cancel-order" onClick={handleCancelOrder}>Hủy đơn</button>
-        )}
+      <div className="info-box">
+        <h4><i className="fa-solid fa-circle-info" style={{ color: '#ee4d2d' }}></i> Thông tin đơn hàng</h4>
+        <p><strong>Ngày đặt:</strong> {new Date(order.createdAt).toLocaleString('vi-VN')}</p>
+        <p><strong>Thanh toán:</strong> {order.isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}</p>
+        <p><strong>Phương thức:</strong> {order.paymentMethod}</p>
       </div>
     </div>
+
+    <h3 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px' }}>Sản phẩm đã mua</h3>
+    <table className="order-items-table">
+      <thead>
+        <tr>
+          <th>Sản phẩm</th>
+          <th>Đơn giá</th>
+          <th style={{ textAlign: 'center' }}>Số lượng</th>
+          <th style={{ textAlign: 'right' }}>Thành tiền</th>
+        </tr>
+      </thead>
+      <tbody>
+        {order.orderItems.map((item, index) => (
+          <tr key={index}>
+            <td>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <img 
+                  src={item.image.startsWith('http') ? item.image : `http://localhost:5000${item.image}`} 
+                  width="60" 
+                  style={{ borderRadius: '8px', border: '1px solid #eee' }} 
+                  alt="" 
+                />
+                <span style={{ fontWeight: '500' }}>{item.name}</span>
+              </div>
+            </td>
+            <td>{Number(item.price).toLocaleString('vi-VN')} đ</td>
+            <td style={{ textAlign: 'center' }}>{item.qty}</td>
+            <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
+              {(item.price * item.qty).toLocaleString('vi-VN')} đ
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+
+    <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fafafa', padding: '20px', borderRadius: '8px' }}>
+      <div>
+        <span style={{ fontWeight: '600', marginRight: '10px' }}>Trạng thái:</span>
+        <span className={`badge ${order.status === 'Hoàn thành' ? 'badge-delivered' : 'badge-pending'}`}>
+          {order.status}
+        </span>
+      </div>
+      {order.status === 'Chờ xác nhận' && (
+        <button className="btn-cancel-order" onClick={handleCancelOrder}>Hủy đơn hàng</button>
+      )}
+    </div>
+  </div>
   );
 };
 
