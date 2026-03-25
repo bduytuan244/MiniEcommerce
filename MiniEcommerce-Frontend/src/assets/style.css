@@ -520,7 +520,6 @@ footer {
     color: #777;
 }
 
-/* --- CHECKOUT STYLES --- */
 .checkout-container { max-width: 1000px; margin: 30px auto 50px; padding: 0 20px; display: flex; gap: 30px; align-items: flex-start; }
 .checkout-form { flex: 6; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
 .checkout-form h2 { margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; font-size: 1.4rem; color: #333; margin-bottom: 25px;}
@@ -529,15 +528,12 @@ footer {
 .final-price-box { margin-top: 25px; padding-top: 20px; border-top: 2px solid #eee; display: flex; justify-content: space-between; align-items: center; }
 #final-total { font-size: 1.8rem; font-weight: 700; color: #ee4d2d; }
 
-/* --- SỬA LỖI FORM CHECKOUT --- */
 .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; }
 .input-wrapper { position: relative; }
-/* Chỉnh lại vị trí icon */
 .input-wrapper i { position: absolute; left: 15px; top: 15px; color: #888; z-index: 1; }
-/* Đẩy chữ trong input thụt vào để không đè lên icon */
 .form-group input, .form-group textarea, .form-group select { 
     width: 100%; 
-    padding: 12px 12px 12px 45px; /* Quan trọng: 45px để thụt lề trái */
+    padding: 12px 12px 12px 45px; 
     border: 1px solid #ddd; 
     border-radius: 8px; 
     box-sizing: border-box; 
@@ -546,7 +542,6 @@ footer {
 }
 .form-group textarea { padding-top: 12px; }
 
-/* --- CSS CHO SẢN PHẨM Ở TÓM TẮT ĐƠN HÀNG --- */
 .summary-item-card { 
     display: flex; align-items: center; gap: 15px; 
     margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 15px; 
@@ -562,7 +557,6 @@ footer {
 }
 .summary-item-price { color: #ee4d2d; font-weight: 600; }
 
-/* --- CSS CHO COUPON --- */
 .coupon-section { margin-top: 20px; padding-top: 20px; border-top: 1px dashed #ddd; }
 .coupon-box { display: flex; gap: 10px; margin-top: 10px; }
 .coupon-box input { flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 6px; outline: none; text-transform: uppercase; }

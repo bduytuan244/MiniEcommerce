@@ -9,7 +9,6 @@ const Checkout = () => {
         name: '', phone: '', address: '', paymentMethod: 'COD'
     });
     
-    // Thêm State cho Mã giảm giá
     const [couponCode, setCouponCode] = useState('');
     const [discount, setDiscount] = useState(0); 
     
@@ -27,7 +26,6 @@ const Checkout = () => {
         if (user) setShippingInfo(prev => ({ ...prev, name: user.name }));
     }, [navigate]);
 
-    // Tính tổng tiền gốc
     const calculateSubTotal = () => {
         return cartItems.reduce((acc, item) => {
             const price = typeof item.price === 'object' && item.price?.$numberDecimal 
@@ -38,12 +36,11 @@ const Checkout = () => {
     };
 
     const subTotal = calculateSubTotal();
-    const finalTotal = subTotal - discount; // Tổng tiền sau khi giảm
+    const finalTotal = subTotal - discount; 
 
-    // Hàm áp dụng mã giảm giá (Mô phỏng)
     const handleApplyCoupon = () => {
         if (couponCode.toUpperCase() === 'SALE10') {
-            const discountValue = subTotal * 0.1; // Giảm 10%
+            const discountValue = subTotal * 0.1; 
             setDiscount(discountValue);
             Swal.fire('Thành công', 'Đã áp dụng mã giảm giá 10%!', 'success');
         } else if (couponCode.trim() === '') {
@@ -66,25 +63,22 @@ const Checkout = () => {
         try {
             const orderData = {
                 orderItems: cartItems.map(item => ({
-                    product: item._id || item.product, // Phòng trường hợp ID bị lệch
+                    product: item._id || item.product, 
                     name: item.name,
                     qty: item.qty,
                     image: item.images?.[0] || item.image,
                     price: typeof item.price === 'object' ? Number(item.price.$numberDecimal) : item.price
                 })),
                 
-                // Gửi cả 2 kiểu để chắc chắn Backend nào cũng nhận được
-                shippingAddress: { 
+                shippingInfo: { 
                     address: shippingInfo.address, 
-                    phone: shippingInfo.phone 
+                    phone: shippingInfo.phone,
+                    fullName: shippingInfo.name 
                 },
-                address: shippingInfo.address, // Thêm dòng này ra ngoài
-                phone: shippingInfo.phone,     // Thêm dòng này ra ngoài
                 
                 paymentMethod: shippingInfo.paymentMethod,
-                totalPrice: finalTotal,
-                customerName: shippingInfo.name
-            };
+                totalPrice: finalTotal
+            }; 
 
             const res = await axios.post('http://localhost:5000/api/orders', orderData, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -94,10 +88,11 @@ const Checkout = () => {
                 localStorage.removeItem('cart');
                 window.dispatchEvent(new Event('storage')); 
                 Swal.fire('Thành công', 'Đơn hàng đã được ghi nhận!', 'success').then(() => {
-                    navigate(`/order/${res.data._id}`);
+                    navigate(`/order/${res.data._id}`); 
                 });
             }
-        } catch (error) {
+        } catch (error) { 
+            console.error("Lỗi đặt hàng:", error);
             Swal.fire('Lỗi', error.response?.data?.message || 'Không thể đặt hàng', 'error');
         }
     };
@@ -148,7 +143,6 @@ const Checkout = () => {
             <div className="checkout-summary">
                 <h2>Tóm tắt đơn hàng</h2>
                 
-                {/* HIỂN THỊ DANH SÁCH SẢN PHẨM RÕ RÀNG HƠN */}
                 <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '15px' }}>
                     {cartItems.map((item, index) => {
                         const itemPrice = typeof item.price === 'object' ? Number(item.price.$numberDecimal) : item.price;
@@ -171,7 +165,6 @@ const Checkout = () => {
                     })}
                 </div>
 
-                {/* KHU VỰC NHẬP MÃ GIẢM GIÁ */}
                 <div className="coupon-section">
                     <p style={{ fontWeight: 600, marginBottom: '5px', color: '#444' }}>Mã giảm giá</p>
                     <div className="coupon-box">
