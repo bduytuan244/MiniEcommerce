@@ -8,18 +8,21 @@ import Cart from './pages/Cart';
 import VerifyOTP from './pages/VerifyOTP';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Profile from './pages/Profile';
+import OrderDetail from './pages/OrderDetail';
 
-const ProfileDummy = () => <div style={{padding: '50px', textAlign: 'center'}}><h1>Trang cá nhân / Checkout</h1></div>;
-const SellerDummy = () => <div style={{padding: '50px', textAlign: 'center'}}><h1>Kênh người bán</h1></div>;
+const SellerDummy = () => <div style={{padding: '50px', textAlign: 'center'}}><h1>Kênh người bán (Sắp ra mắt)</h1></div>;
 
 function App() {
   return (
     <BrowserRouter>
       <Header />
+
       <div style={{ paddingTop: '70px', minHeight: '80vh' }}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/product/:id" element={<ProductDetail />} />
+          
           <Route path="/cart" element={<Cart />} />
           
           <Route path="/login" element={<Login />} />
@@ -28,7 +31,9 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           
-          <Route path="/profile" element={<ProfileDummy />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/order/:id" element={<OrderDetail />} />
+          
           <Route path="/seller" element={<SellerDummy />} />
         </Routes>
       </div>
