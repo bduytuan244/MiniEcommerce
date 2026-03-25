@@ -6,9 +6,9 @@ import Register from './pages/Register';
 import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
 import VerifyOTP from './pages/VerifyOTP';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
-const ForgotPasswordDummy = () => <div style={{padding: '50px', textAlign: 'center'}}><h1>Quên mật khẩu</h1></div>;
-const ResetPasswordDummy = () => <div style={{padding: '50px', textAlign: 'center'}}><h1>Đặt lại mật khẩu</h1></div>;
 const ProfileDummy = () => <div style={{padding: '50px', textAlign: 'center'}}><h1>Trang cá nhân / Checkout</h1></div>;
 const SellerDummy = () => <div style={{padding: '50px', textAlign: 'center'}}><h1>Kênh người bán</h1></div>;
 
@@ -25,8 +25,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-otp" element={<VerifyOTP />} />
-          <Route path="/forgot-password" element={<ForgotPasswordDummy />} />
-          <Route path="/reset-password" element={<ResetPasswordDummy />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           
           <Route path="/profile" element={<ProfileDummy />} />
           <Route path="/seller" element={<SellerDummy />} />
