@@ -13,8 +13,10 @@ const Header = () => {
     }
 
     const cart = JSON.parse(localStorage.getItem('cart')) || [];
-    const totalItems = cart.reduce((acc, item) => acc + (item.qty || 1), 0);
-    setCartCount(totalItems);
+    if (Array.isArray(cart)) {
+      const totalItems = cart.reduce((acc, item) => acc + (item.qty || 1), 0);
+      setCartCount(totalItems);
+    }
   }, []);
 
   const handleLogout = (e) => {
@@ -39,18 +41,18 @@ const Header = () => {
           <span className="cart-badge">{cartCount}</span>
         </Link>
         
-        {user && (user.role === 'seller' || user.role === 'admin') && (
+        {(user?.role === 'seller' || user?.role === 'admin') ? (
           <Link to="/seller" className="link-seller-center">
             <i className="fa-solid fa-store"></i> Kênh Người Bán
           </Link>
-        )}
+        ) : null}
 
         {!user ? (
           <Link to="/login"><i className="fa-solid fa-user"></i> Đăng nhập</Link>
         ) : (
           <div className="user-menu">
             <Link to="/profile">
-              <i className="fa-solid fa-circle-user"></i> <span>{user.name || 'Tài khoản'}</span>
+              <i className="fa-solid fa-circle-user"></i> <span>{user?.email || 'Tài khoản'}</span>
             </Link>
             <a href="/" onClick={handleLogout} style={{ color: '#ffccc7' }}>
               <i className="fa-solid fa-right-from-bracket"></i> Đăng xuất
