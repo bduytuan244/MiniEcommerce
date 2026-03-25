@@ -43,9 +43,6 @@
             background: white; border-radius: 12px; box-shadow: 0 1px 5px rgba(0,0,0,0.05);
         }
         .review-section h2 { margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; font-size: 1.4rem; }
-        .review-form { margin-bottom: 30px; background: #fafafa; padding: 20px; border-radius: 8px; }
-        .review-input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; font-family: 'Inter', sans-serif; box-sizing: border-box; }
-        .btn-submit-review { background: #28a745; color: white; padding: 10px 25px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
         
         .star-color { color: #ffce3d; }
     </style>
@@ -64,29 +61,6 @@
     <div id="review-section" class="review-section">
         <h2>Khách hàng đánh giá</h2>
         
-        <div class="review-form">
-            <h3 style="margin-top: 0; font-size: 1.1rem;">Viết đánh giá của bạn</h3>
-            <form id="form-review">
-                <div style="margin-bottom: 15px;">
-                    <label style="font-weight: 600; display: block; margin-bottom: 8px;">Mức độ hài lòng:</label>
-                    <select id="rating" class="review-input" style="width: auto;">
-                        <option value="5">5 Sao - Tuyệt vời</option>
-                        <option value="4">4 Sao - Rất tốt</option>
-                        <option value="3">3 Sao - Bình thường</option>
-                        <option value="2">2 Sao - Tệ</option>
-                        <option value="1">1 Sao - Rất tệ</option>
-                    </select>
-                </div>
-                <div>
-                    <label style="font-weight: 600; display: block; margin-bottom: 8px;">Cảm nhận chi tiết:</label>
-                    <textarea id="comment" rows="4" class="review-input" placeholder="Bạn thấy sản phẩm này thế nào? (Chất lượng, màu sắc, đóng gói...)" required></textarea>
-                </div>
-                <button type="submit" class="btn-submit-review">
-                    <i class="fa-solid fa-paper-plane"></i> Gửi đánh giá
-                </button>
-            </form>
-        </div>
-
         <div id="review-list">
             <p style="text-align: center; color: #666;">Chưa có đánh giá nào cho sản phẩm này.</p>
         </div>
