@@ -77,11 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (productId) {
         loadReviews(productId);
-        
-        const reviewForm = document.getElementById('form-review');
-        if(reviewForm) {
-            reviewForm.addEventListener('submit', (e) => submitReview(e, productId));
-        }
     }
 });
 
@@ -117,13 +112,13 @@ async function loadReviews(productId) {
         const reviews = await res.json();
 
         if (reviews.length === 0) {
-            list.innerHTML = '<p style="font-style:italic; color:#777; text-align:center;">Chưa có đánh giá nào. Hãy là người đầu tiên!</p>';
+            list.innerHTML = '<p style="font-style:italic; color:#777; text-align:center;">Chưa có đánh giá nào. Hãy là người đầu tiên mua và trải nghiệm!</p>';
             return;
         }
 
         list.innerHTML = reviews.map(r => {
-            const starsHtml = '<i class="fa-solid fa-star star-color"></i>'.repeat(r.rating) 
-                            + '<i class="fa-regular fa-star star-color"></i>'.repeat(5 - r.rating);
+            const starsHtml = '<i class="fa-solid fa-star star-color" style="color:#ffc107;"></i>'.repeat(r.rating) 
+                            + '<i class="fa-regular fa-star star-color" style="color:#ccc;"></i>'.repeat(5 - r.rating);
 
             return `
             <div style="margin-bottom: 15px; padding: 20px; background: #fafafa; border-radius: 8px; border-left: 4px solid #ee4d2d;">
@@ -139,59 +134,5 @@ async function loadReviews(productId) {
         
     } catch (error) {
         console.error("Lỗi load review:", error);
-    }
-}
-
-async function submitReview(e, productId) {
-    e.preventDefault();
-    
-    const token = localStorage.getItem('token');
-    if (!token) {
-        Swal.fire({
-            title: 'Chưa đăng nhập',
-            text: 'Bạn cần đăng nhập để viết đánh giá',
-            icon: 'info',
-            confirmButtonText: 'Tới trang Đăng nhập',
-            showCancelButton: true,
-            cancelButtonText: 'Hủy'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.location.href = '../auth/login.html';
-            }
-        });
-        return;
-    }
-
-    const rating = document.getElementById('rating').value;
-    const comment = document.getElementById('comment').value;
-    const btnSubmit = e.target.querySelector('button');
-
-    btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
-
-    try {
-        const res = await fetch(`http://localhost:5000/api/reviews`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ rating, comment, productId }) 
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-            Swal.fire('Thành công!', 'Cảm ơn bạn đã đánh giá', 'success');
-            document.getElementById('comment').value = ''; 
-            loadReviews(productId); 
-        } else {
-            Swal.fire('Lỗi!', data.message || "Không thể gửi đánh giá", 'error');
-        }
-    } catch (error) {
-        Swal.fire('Lỗi!', 'Không thể kết nối đến máy chủ', 'error');
-    } finally {
-        btnSubmit.disabled = false;
-        btnSubmit.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Gửi đánh giá';
     }
 }
