@@ -140,7 +140,7 @@ const Cart = () => {
             Tổng thanh toán: <span id="total-price">{calculateTotal().toLocaleString('vi-VN')} đ</span>
           </div>
           
-          <button className="btn-checkout" onClick={() => navigate('/profile')}>
+          <button className="btn-checkout" onClick={() => navigate('/checkout')}>
             Tiến hành đặt hàng <i className="fa-solid fa-arrow-right"></i>
           </button>
         </div>

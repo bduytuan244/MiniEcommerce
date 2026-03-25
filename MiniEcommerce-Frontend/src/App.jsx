@@ -11,6 +11,7 @@ import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 import OrderDetail from './pages/OrderDetail';
 import Footer from './components/Footer';
+import Checkout from './pages/Checkout';
 
 const SellerDummy = () => <div style={{padding: '50px', textAlign: 'center'}}><h1>Kênh người bán (Sắp ra mắt)</h1></div>;
 
@@ -34,6 +35,7 @@ function App() {
           
           <Route path="/profile" element={<Profile />} />
           <Route path="/order/:id" element={<OrderDetail />} />
+          <Route path="/checkout" element={<Checkout />} />
           
           <Route path="/seller" element={<SellerDummy />} />
         </Routes>
