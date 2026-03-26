@@ -24,7 +24,9 @@ const AppLayout = () => {
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
       (response) => response,
-      (error) => {
+      async (error) => {
+        const originalRequest = error.config;
+
         if (error.response && error.response.status === 403 && error.response.data?.message?.includes('khóa')) {
           Swal.fire({
             title: 'Tài khoản bị khóa!',
@@ -33,12 +35,39 @@ const AppLayout = () => {
             confirmButtonText: 'Đã hiểu',
             allowOutsideClick: false
           }).then(() => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('userInfo');
-            localStorage.removeItem('cart');
+            localStorage.clear(); 
             window.location.href = '/login'; 
           });
+          return Promise.reject(error);
         }
+        if (error.response && error.response.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true; 
+
+          const refreshToken = localStorage.getItem('refreshToken') || localStorage.getItem('adminRefreshToken');
+          
+          if (refreshToken) {
+            try {
+              const res = await axios.post('http://localhost:5000/api/auth/refresh', { refreshToken });
+              const newAccessToken = res.data.accessToken;
+              
+              if (localStorage.getItem('adminToken')) {
+                  localStorage.setItem('adminToken', newAccessToken);
+              } else {
+                  localStorage.setItem('token', newAccessToken);
+              }
+
+              originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+              return axios(originalRequest); 
+
+            } catch (refreshError) {
+              console.error("Refresh token thất bại, vui lòng đăng nhập lại", refreshError);
+              localStorage.clear();
+              window.location.href = '/login';
+              return Promise.reject(refreshError);
+            }
+          }
+        }
+
         return Promise.reject(error);
       }
     );

@@ -61,6 +61,7 @@ const Admin = () => {
             const res = await axios.post('http://localhost:5000/api/auth/login', { email: loginEmail, password: loginPassword });
             if (res.data.user && res.data.user.isAdmin) {
                 localStorage.setItem('adminToken', res.data.accessToken);
+                localStorage.setItem('adminRefreshToken', res.data.refreshToken);
                 localStorage.setItem('adminUser', JSON.stringify(res.data.user));
                 Swal.fire({ title: 'Thành công!', text: 'Đăng nhập Quản trị thành công', icon: 'success', timer: 1500, showConfirmButton: false });
                 setIsAdminLoggedIn(true);
