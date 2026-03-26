@@ -6,13 +6,11 @@ import Swal from 'sweetalert2';
 const Admin = () => {
     const navigate = useNavigate();
     
-    // --- LOGIN STATE ---
     const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(!!localStorage.getItem('adminToken'));
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-    // --- ADMIN STATES ---
     const [activeTab, setActiveTab] = useState('dashboard');
     const [dashboardData, setDashboardData] = useState({ revenue: 0, ordersCount: 0, completed: 0, pending: 0 });
     const [users, setUsers] = useState([]);
@@ -21,7 +19,6 @@ const Admin = () => {
     const [requests, setRequests] = useState([]);
     const [coupons, setCoupons] = useState([]);
     
-    // --- MODAL & FORM STATES ---
     const [editProductId, setEditProductId] = useState(null);
     const [formData, setFormData] = useState({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '', images: [] });
     const fileInputRef = useRef(null);
@@ -48,7 +45,6 @@ const Admin = () => {
         if (activeTab === 'add-product' && !editProductId) setFormData({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '', images: [] });
     }, [activeTab, editProductId, isAdminLoggedIn]);
 
-    /* ================= LOGIN CÓ POPUP RÕ RÀNG ================= */
     const handleAdminLogin = async (e) => {
         e.preventDefault();
         setIsLoggingIn(true);
@@ -74,7 +70,6 @@ const Admin = () => {
 
     if (!isAdminLoggedIn) {
         return (
-            // FIX: zIndex hạ xuống 99 để không che mất popup của SweetAlert2 (1060)
             <div className="admin-login-layout" style={{background: 'linear-gradient(135deg, #1e293b 0%, #2c3e50 100%)', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', position: 'fixed', top:0, left:0, width:'100vw', zIndex: 99 }}>
                 <div className="admin-login-box" style={{background: 'white', padding: '40px 35px', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', width: '100%', maxWidth: '400px', textAlign: 'center'}}>
                     <i className="fa-solid fa-shield-halved" style={{fontSize: '3rem', color: '#e74c3c', marginBottom: '10px'}}></i>
@@ -90,7 +85,6 @@ const Admin = () => {
         );
     }
 
-    /* ================= FETCH DATA ================= */
     const fetchDashboardData = async () => {
         try {
             const res = await axios.get('http://localhost:5000/api/orders', getAuthHeader());
@@ -120,7 +114,6 @@ const Admin = () => {
     const fetchRequests = async () => { try { const res = await axios.get('http://localhost:5000/api/users/seller-requests', getAuthHeader()); setRequests(res.data); } catch(e){} };
     const fetchCoupons = async () => { try { const res = await axios.get('http://localhost:5000/api/coupons', getAuthHeader()); setCoupons(res.data); } catch(e){} };
     
-    // FIX: Tải đầy đủ countInStock
     const fetchProductDetail = async (id) => { 
         try { 
             const res = await axios.get(`http://localhost:5000/api/products/${id}`); 
@@ -128,7 +121,6 @@ const Admin = () => {
         } catch(e){} 
     };
 
-    /* ================= ACTIONS ================= */
     const toggleLockUser = async (id) => { try { await axios.put(`http://localhost:5000/api/users/${id}/lock`, {}, getAuthHeader()); fetchUsers(); } catch (e) { Swal.fire('Lỗi', 'Không thể khóa', 'error'); } };
     
     const deleteUser = async (id) => { 
@@ -186,7 +178,6 @@ const Admin = () => {
         } catch (e) { Swal.fire('Lỗi', e.response?.data?.message || 'Không thể tạo mã', 'error'); }
     };
     
-    // FIX: Sửa lại chuẩn gửi Data Sản phẩm (Có cả stock và countInStock)
     const handleSaveProduct = async (e) => {
         e.preventDefault();
         Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
@@ -207,7 +198,6 @@ const Admin = () => {
                 name: formData.name,
                 price: Number(formData.price),
                 countInStock: Number(formData.countInStock),
-                stock: Number(formData.countInStock), // Backend cần trường này
                 brand: formData.brand,
                 category: formData.category,
                 description: formData.description,
@@ -237,8 +227,6 @@ const Admin = () => {
         } catch (e) { Swal.fire('Lỗi', 'Không thể cập nhật', 'error'); }
     };
 
-    /* ================= RENDERS ================= */
-    // FIX: zIndex 99 cho admin-layout
     return (
         <div className="admin-layout" style={{ display: 'flex', height: '100vh', background: '#f4f6f9', fontFamily: 'Inter', position: 'fixed', top: 0, left: 0, width: '100vw', zIndex: 99 }}>
             <div className="admin-sidebar" style={{width: '250px', background: '#343a40', color: 'white', display: 'flex', flexDirection: 'column'}}>
@@ -261,7 +249,6 @@ const Admin = () => {
                 </div>
 
                 <div className="admin-content" style={{padding: '30px', flex: 1}}>
-                    {/* DASHBOARD */}
                     {activeTab === 'dashboard' && (
                         <>
                             <div className="admin-cards-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px'}}>
@@ -277,7 +264,6 @@ const Admin = () => {
                         </>
                     )}
 
-                    {/* USERS */}
                     {activeTab === 'users' && (
                         <table style={{width: '100%', background: 'white', borderCollapse: 'collapse', borderRadius: '8px', overflow: 'hidden'}}>
                             <thead><tr style={{background: '#f8f9fa', textAlign: 'left'}}><th style={{padding: '15px'}}>Tên & Email</th><th style={{textAlign:'center'}}>Phân quyền</th><th style={{textAlign:'center'}}>Trạng thái</th><th style={{textAlign:'center'}}>Hành động</th></tr></thead>
@@ -299,7 +285,6 @@ const Admin = () => {
                         </table>
                     )}
 
-                    {/* PRODUCTS */}
                     {activeTab === 'products' && (
                         <>
                             <button style={{background:'#28a745', color: 'white', border: 'none', padding:'10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '15px'}} onClick={()=>{setEditProductId(null); setActiveTab('add-product');}}>+ Thêm sản phẩm mới</button>
@@ -310,7 +295,6 @@ const Admin = () => {
                                         <tr key={p._id} style={{borderBottom: '1px solid #eee'}}>
                                             <td style={{padding: '15px'}}><div style={{display:'flex', gap:'10px'}}><img src={p.images?.[0]?.startsWith('http') ? p.images[0] : `http://localhost:5000${p.images?.[0]}`} width="40" height="40" style={{objectFit: 'contain'}}/> <strong>{p.name}</strong></div></td>
                                             <td style={{color:'#ee4d2d', fontWeight:'bold', padding: '15px'}}>{Number(p.price?.['$numberDecimal'] || p.price).toLocaleString()} đ</td>
-                                            {/* FIX: Hiển thị đúng tồn kho */}
                                             <td style={{textAlign:'center'}}><span style={{padding: '4px 10px', borderRadius: '12px', background: p.countInStock > 0 || p.stock > 0 ? '#e6f4ea' : '#f8d7da', color: p.countInStock > 0 || p.stock > 0 ? '#1e7e34' : '#721c24', fontWeight: 'bold'}}>{p.countInStock || p.stock || 0}</span></td>
                                             <td style={{textAlign:'center'}}>
                                                 <button style={{background:'#ffc107', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', marginRight: '5px', fontWeight: 'bold'}} onClick={()=>{setEditProductId(p._id); setActiveTab('add-product');}}>Sửa</button>
@@ -323,7 +307,6 @@ const Admin = () => {
                         </>
                     )}
 
-                    {/* PRODUCT FORM */}
                     {activeTab === 'add-product' && (
                         <div style={{background:'white', padding:'30px', borderRadius:'8px', maxWidth:'800px', margin:'0 auto'}}>
                             <h2 style={{textAlign:'center', marginTop: 0}}>{editProductId ? 'SỬA SẢN PHẨM' : 'THÊM MỚI'}</h2>
@@ -344,7 +327,6 @@ const Admin = () => {
                         </div>
                     )}
 
-                    {/* ORDERS */}
                     {activeTab === 'orders' && (
                         <>
                             <table style={{width: '100%', background: 'white', borderCollapse: 'collapse', borderRadius: '8px', overflow: 'hidden'}}>
@@ -362,7 +344,6 @@ const Admin = () => {
                                 </tbody>
                             </table>
 
-                            {/* ORDER MODAL */}
                             {isOrderModalOpen && selectedOrder && (
                                 <div style={{position:'fixed', top:0, left:0, width:'100%', height:'100%', background:'rgba(0,0,0,0.5)', display:'flex', justifyContent:'center', alignItems:'center', zIndex:1000}}>
                                     <div style={{background:'white', padding:'25px', borderRadius:'12px', width:'500px', maxHeight:'90vh', overflowY:'auto'}}>
@@ -394,7 +375,6 @@ const Admin = () => {
                         </>
                     )}
 
-                    {/* SELLER REQUESTS */}
                     {activeTab === 'seller-requests' && (
                         <table style={{width: '100%', background: 'white', borderCollapse: 'collapse', borderRadius: '8px', overflow: 'hidden'}}>
                             <thead><tr style={{background: '#f8f9fa', textAlign: 'left'}}><th style={{padding: '15px'}}>Khách hàng</th><th>Email</th><th>Trạng thái</th><th style={{textAlign:'center'}}>Hành động</th></tr></thead>
@@ -412,7 +392,6 @@ const Admin = () => {
                         </table>
                     )}
 
-                    {/* COUPONS */}
                     {activeTab === 'coupons' && (
                         <>
                             <div style={{background:'white', padding:'20px', borderRadius:'8px', marginBottom:'20px', borderLeft:'4px solid #ee4d2d'}}>

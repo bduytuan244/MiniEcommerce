@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -12,27 +12,27 @@ import Profile from './pages/Profile';
 import OrderDetail from './pages/OrderDetail';
 import Footer from './components/Footer';
 import Checkout from './pages/Checkout';
-import Seller from './pages/Seller'; 
-import Admin from './pages/Admin';
+import Seller from './pages/Seller';
+import Admin from './pages/Admin'; 
 
-function App() {
+const AppLayout = () => {
+  const location = useLocation();
+  const isDashboard = location.pathname.startsWith('/admin') || location.pathname.startsWith('/seller');
+
   return (
-    <BrowserRouter>
-      <Header />
+    <>
+      {!isDashboard && <Header />}
 
-      <div style={{ paddingTop: '70px', minHeight: '80vh' }}>
+      <div style={{ paddingTop: isDashboard ? '0' : '70px', minHeight: '80vh' }}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/product/:id" element={<ProductDetail />} />
-          
           <Route path="/cart" element={<Cart />} />
-          
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-otp" element={<VerifyOTP />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          
           <Route path="/profile" element={<Profile />} />
           <Route path="/order/:id" element={<OrderDetail />} />
           <Route path="/checkout" element={<Checkout />} />
@@ -41,7 +41,16 @@ function App() {
           <Route path="/admin" element={<Admin />} />
         </Routes>
       </div>
-      <Footer />
+      
+      {!isDashboard && <Footer />}
+    </>
+  );
+};
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppLayout />
     </BrowserRouter>
   );
 }
