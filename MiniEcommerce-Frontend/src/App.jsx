@@ -1,4 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import axios from 'axios';
+import Swal from 'sweetalert2';
 import Header from './components/Header';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -18,12 +21,38 @@ import Admin from './pages/Admin';
 const AppLayout = () => {
   const location = useLocation();
   const isDashboard = location.pathname.startsWith('/admin') || location.pathname.startsWith('/seller');
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.status === 403 && error.response.data?.message?.includes('khóa')) {
+          Swal.fire({
+            title: 'Tài khoản bị khóa!',
+            text: 'Tài khoản của bạn đã bị vô hiệu hóa bởi Quản trị viên.',
+            icon: 'error',
+            confirmButtonText: 'Đã hiểu',
+            allowOutsideClick: false
+          }).then(() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('userInfo');
+            localStorage.removeItem('cart');
+            window.location.href = '/login'; 
+          });
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, []);
 
   return (
     <>
       {!isDashboard && <Header />}
 
-      <div style={{ paddingTop: isDashboard ? '0' : '70px', minHeight: '80vh' }}>
+      <div style={{ minHeight: '80vh' }}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/product/:id" element={<ProductDetail />} />
