@@ -45,6 +45,52 @@ const OrderDetail = () => {
     }
   };
 
+  const handleConfirmReceived = async () => {
+    const result = await Swal.fire({
+      title: 'Xác nhận đã nhận hàng?',
+      text: 'Tiền sẽ được chuyển cho Người bán. Bạn sẽ không thể trả hàng sau khi xác nhận!',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Đã nhận được hàng',
+      confirmButtonColor: '#28a745'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axios.put(`http://localhost:5000/api/orders/${id}/status`, { status: 'Hoàn thành' }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        Swal.fire('Cảm ơn bạn!', 'Đơn hàng đã hoàn thành.', 'success');
+        window.location.reload();
+      } catch (err) {
+        Swal.fire('Lỗi', err.response?.data?.message || 'Không thể cập nhật', 'error');
+      }
+    }
+  };
+
+  const handleReturnOrder = async () => {
+    const result = await Swal.fire({
+      title: 'Yêu cầu trả hàng/Hoàn tiền?',
+      text: 'Bạn có chắc chắn muốn trả lại đơn hàng này không?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Xác nhận Trả hàng',
+      confirmButtonColor: '#dc3545'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axios.put(`http://localhost:5000/api/orders/${id}/status`, { status: 'Trả hàng' }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        Swal.fire('Thành công', 'Đã gửi yêu cầu Trả hàng.', 'success');
+        window.location.reload();
+      } catch (err) {
+        Swal.fire('Lỗi', err.response?.data?.message || 'Không thể cập nhật', 'error');
+      }
+    }
+  };
+
   const openReviewPopup = async (productId, productName) => {
     const { value: formValues } = await Swal.fire({
       title: 'Đánh giá sản phẩm',
@@ -183,22 +229,36 @@ const OrderDetail = () => {
         </div>
 
         <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fafafa', padding: '20px', borderRadius: '8px', border: '1px solid #eee' }}>
-        <div>
-            <span style={{ fontWeight: '600', marginRight: '10px' }}>Trạng thái đơn hàng:</span>
-            <span className="badge" style={{
-                background: order.status === 'Hoàn thành' ? '#d4edda' : order.status === 'Đã hủy' ? '#f8d7da' : '#fff3cd',
-                color: order.status === 'Hoàn thành' ? '#155724' : order.status === 'Đã hủy' ? '#721c24' : '#856404',
-                padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold'
-            }}>
-            {order.status}
-            </span>
-        </div>
+            <div>
+                <span style={{ fontWeight: '600', marginRight: '10px' }}>Trạng thái đơn hàng:</span>
+                <span className="badge" style={{
+                    background: order.status === 'Hoàn thành' ? '#d4edda' : (order.status === 'Đã hủy' || order.status === 'Trả hàng') ? '#f8d7da' : '#cce5ff',
+                    color: order.status === 'Hoàn thành' ? '#155724' : (order.status === 'Đã hủy' || order.status === 'Trả hàng') ? '#721c24' : '#004085',
+                    padding: '8px 15px', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.9rem'
+                }}>
+                {order.status}
+                </span>
+            </div>
         
-        {order.status === 'Chờ xác nhận' && (
-            <button className="btn-cancel-order" onClick={handleCancelOrder} style={{background: 'white', color: '#dc3545', border: '1px solid #dc3545', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer'}}>
-                Hủy đơn hàng
-            </button>
-        )}
+            <div style={{display: 'flex', gap: '10px'}}>
+                {order.status === 'Chờ xác nhận' && (
+                    <button className="btn-cancel-order" onClick={handleCancelOrder} style={{background: 'white', color: '#dc3545', border: '1px solid #dc3545', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer'}}>
+                        Hủy đơn hàng
+                    </button>
+                )}
+
+                {(order.status === 'Đang vận chuyển' || order.status === 'Hoàn thành') && (
+                    <button onClick={handleReturnOrder} style={{background: 'white', color: '#dc3545', border: '1px solid #dc3545', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer'}}>
+                        Yêu cầu Trả hàng
+                    </button>
+                )}
+
+                {order.status === 'Đang vận chuyển' && (
+                    <button onClick={handleConfirmReceived} style={{background: '#28a745', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer'}}>
+                        Đã nhận được hàng
+                    </button>
+                )}
+            </div>
         </div>
     </div>
   </div>

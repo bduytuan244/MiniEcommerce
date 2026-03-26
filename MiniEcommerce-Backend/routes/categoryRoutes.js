@@ -5,11 +5,13 @@ const { verifyToken, verifyAdmin } = require('../middleware/authMiddleware');
 
 const validate = require('../middleware/validateMiddleware');
 const { categorySchema } = require('../validations/categoryValidation');
+const { idSchema } = require('../validations/paramValidation');
 
 router.get('/', categoryController.getCategories);
 
 router.post('/', verifyToken, verifyAdmin, validate(categorySchema), categoryController.createCategory);
-router.put('/:id', verifyToken, verifyAdmin, validate(categorySchema), categoryController.updateCategory);
-router.delete('/:id', verifyToken, verifyAdmin, categoryController.deleteCategory);
+
+router.put('/:id', verifyToken, verifyAdmin, validate(idSchema, 'params'), validate(categorySchema), categoryController.updateCategory);
+router.delete('/:id', verifyToken, verifyAdmin, validate(idSchema, 'params'), categoryController.deleteCategory);
 
 module.exports = router;
