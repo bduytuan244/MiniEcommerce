@@ -12,8 +12,7 @@ import Profile from './pages/Profile';
 import OrderDetail from './pages/OrderDetail';
 import Footer from './components/Footer';
 import Checkout from './pages/Checkout';
-
-const SellerDummy = () => <div style={{padding: '50px', textAlign: 'center'}}><h1>Kênh người bán (Sắp ra mắt)</h1></div>;
+import Seller from './pages/Seller'; 
 
 function App() {
   return (
@@ -37,7 +36,7 @@ function App() {
           <Route path="/order/:id" element={<OrderDetail />} />
           <Route path="/checkout" element={<Checkout />} />
           
-          <Route path="/seller" element={<SellerDummy />} />
+          <Route path="/seller" element={<Seller />} />
         </Routes>
       </div>
       <Footer />
