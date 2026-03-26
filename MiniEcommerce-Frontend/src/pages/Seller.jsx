@@ -9,14 +9,13 @@ const Seller = () => {
     const [shopName, setShopName] = useState('...');
     const [editProductId, setEditProductId] = useState(null);
 
-    // THÊM CHỐT CHẶN CHỐNG SPAM CLICK
     const [isProcessing, setIsProcessing] = useState(false);
 
     const [dashboardData, setDashboardData] = useState({ totalProducts: 0, totalOrders: 0 });
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
 
-    const [formData, setFormData] = useState({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '', images: [] });
+    const [formData, setFormData] = useState({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '' });
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -41,7 +40,7 @@ const Seller = () => {
         if (activeTab === 'orders') fetchOrders();
         if (activeTab === 'add-product' && editProductId) fetchProductDetail(editProductId);
         if (activeTab === 'add-product' && !editProductId) {
-            setFormData({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '', images: [] });
+            setFormData({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '' });
         }
     }, [activeTab, editProductId]);
 
@@ -107,44 +106,42 @@ const Seller = () => {
         } catch (error) { Swal.fire('Lỗi', error.response?.data?.message || 'Lỗi cập nhật', 'error'); }
     };
 
-    // ĐÃ ÁP DỤNG PHANH CHỐNG SPAM KHI LƯU
     const handleSaveProduct = async (e) => {
         e.preventDefault();
-        if (isProcessing) return; // Nếu đang xử lý thì chặn luôn
+        if (isProcessing) return; 
         
-        setIsProcessing(true); // Khóa nút
+        setIsProcessing(true); 
         Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         
         try {
-            let finalImageUrl = formData.images?.[0] || '';
             const files = fileInputRef.current.files;
             
-            if (files.length > 0) {
-                const uploadForm = new FormData();
-                uploadForm.append('image', files[0]); 
-                const uploadRes = await axios.post('http://localhost:5000/api/upload', uploadForm, getAuthHeader());
-                finalImageUrl = uploadRes.data.imageUrl;
-            } else if (!editProductId && !finalImageUrl) {
+            if (!editProductId && files.length === 0) {
                 Swal.fire('Lỗi', 'Vui lòng chọn ít nhất 1 ảnh!', 'warning');
-                setIsProcessing(false); // Mở lại nút nếu có lỗi
+                setIsProcessing(false);
                 return;
             }
 
-            const productData = {
-                name: formData.name,
-                price: Number(formData.price),
-                countInStock: Number(formData.countInStock), 
-                brand: formData.brand,
-                category: formData.category,
-                description: formData.description,
-                images: [finalImageUrl]
-            };
-
-            if (editProductId) {
-                await axios.put(`http://localhost:5000/api/products/${editProductId}`, productData, getAuthHeader());
-            } else {
-                await axios.post('http://localhost:5000/api/products', productData, getAuthHeader());
+            const form = new FormData();
+            form.append('name', formData.name);
+            form.append('price', formData.price);
+            
+            form.append('countInStock', formData.countInStock); 
+            
+            form.append('brand', formData.brand);
+            form.append('category', formData.category);
+            form.append('description', formData.description);
+            
+            if (files.length > 0) {
+                for (let i = 0; i < files.length; i++) {
+                    form.append('images', files[i]);
+                }
             }
+
+            const url = editProductId ? `http://localhost:5000/api/products/${editProductId}` : 'http://localhost:5000/api/products';
+            const method = editProductId ? 'put' : 'post';
+
+            await axios[method](url, form, getAuthHeader());
             
             Swal.fire('Thành công!', 'Lưu sản phẩm thành công.', 'success');
             setEditProductId(null);
@@ -152,7 +149,7 @@ const Seller = () => {
         } catch (error) {
             Swal.fire('Lỗi', error.response?.data?.message || 'Lỗi lưu sản phẩm', 'error');
         } finally {
-            setIsProcessing(false); // Mở lại nút khi hoàn thành (hoặc có lỗi từ server)
+            setIsProcessing(false);
         }
     };
 
@@ -236,16 +233,15 @@ const Seller = () => {
                                     <div className="seller-form-group" style={{flex:1}}><label>Danh mục</label><input type="text" required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} /></div>
                                 </div>
                                 <div className="seller-form-group">
-                                    <label>Ảnh sản phẩm (1 ảnh đại diện)</label>
+                                    <label>Ảnh sản phẩm</label>
                                     <div className="seller-file-upload">
                                         <i className="fa-solid fa-cloud-arrow-up" style={{fontSize:'2rem', color:'#ee4d2d', marginBottom:'10px'}}></i><br/>
-                                        <input type="file" ref={fileInputRef} accept="image/*" />
+                                        <input type="file" ref={fileInputRef} accept="image/*" multiple />
                                     </div>
                                     <small style={{color:'#888'}}>* Nếu sửa sản phẩm mà không chọn ảnh mới, hệ thống sẽ giữ lại ảnh cũ.</small>
                                 </div>
                                 <div className="seller-form-group"><label>Mô tả chi tiết</label><textarea rows="5" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})}></textarea></div>
                                 <div style={{textAlign:'center'}}>
-                                    {/* NÚT LƯU BỊ DISABLED VÀ ĐỔI CHỮ KHI ĐANG XỬ LÝ */}
                                     <button 
                                         type="submit" 
                                         disabled={isProcessing}
