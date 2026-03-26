@@ -9,6 +9,9 @@ const Seller = () => {
     const [shopName, setShopName] = useState('...');
     const [editProductId, setEditProductId] = useState(null);
 
+    // THÊM CHỐT CHẶN CHỐNG SPAM CLICK
+    const [isProcessing, setIsProcessing] = useState(false);
+
     const [dashboardData, setDashboardData] = useState({ totalProducts: 0, totalOrders: 0 });
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
@@ -104,9 +107,14 @@ const Seller = () => {
         } catch (error) { Swal.fire('Lỗi', error.response?.data?.message || 'Lỗi cập nhật', 'error'); }
     };
 
+    // ĐÃ ÁP DỤNG PHANH CHỐNG SPAM KHI LƯU
     const handleSaveProduct = async (e) => {
         e.preventDefault();
+        if (isProcessing) return; // Nếu đang xử lý thì chặn luôn
+        
+        setIsProcessing(true); // Khóa nút
         Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        
         try {
             let finalImageUrl = formData.images?.[0] || '';
             const files = fileInputRef.current.files;
@@ -117,7 +125,9 @@ const Seller = () => {
                 const uploadRes = await axios.post('http://localhost:5000/api/upload', uploadForm, getAuthHeader());
                 finalImageUrl = uploadRes.data.imageUrl;
             } else if (!editProductId && !finalImageUrl) {
-                return Swal.fire('Lỗi', 'Vui lòng chọn ít nhất 1 ảnh!', 'warning');
+                Swal.fire('Lỗi', 'Vui lòng chọn ít nhất 1 ảnh!', 'warning');
+                setIsProcessing(false); // Mở lại nút nếu có lỗi
+                return;
             }
 
             const productData = {
@@ -141,6 +151,8 @@ const Seller = () => {
             setActiveTab('products');
         } catch (error) {
             Swal.fire('Lỗi', error.response?.data?.message || 'Lỗi lưu sản phẩm', 'error');
+        } finally {
+            setIsProcessing(false); // Mở lại nút khi hoàn thành (hoặc có lỗi từ server)
         }
     };
 
@@ -233,7 +245,15 @@ const Seller = () => {
                                 </div>
                                 <div className="seller-form-group"><label>Mô tả chi tiết</label><textarea rows="5" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})}></textarea></div>
                                 <div style={{textAlign:'center'}}>
-                                    <button type="submit" className="btn-seller btn-add">{editProductId ? 'Lưu cập nhật' : 'Đăng bán ngay'}</button>
+                                    {/* NÚT LƯU BỊ DISABLED VÀ ĐỔI CHỮ KHI ĐANG XỬ LÝ */}
+                                    <button 
+                                        type="submit" 
+                                        disabled={isProcessing}
+                                        className="btn-seller btn-add"
+                                        style={{ opacity: isProcessing ? 0.7 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
+                                    >
+                                        {isProcessing ? 'Đang lưu...' : (editProductId ? 'Lưu cập nhật' : 'Đăng bán ngay')}
+                                    </button>
                                     <button type="button" className="btn-seller" style={{background:'#6c757d', marginLeft:'15px'}} onClick={() => { setEditProductId(null); setActiveTab('products'); }}>Hủy</button>
                                 </div>
                             </form>

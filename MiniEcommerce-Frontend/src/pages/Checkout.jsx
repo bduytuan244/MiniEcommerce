@@ -12,6 +12,8 @@ const Checkout = () => {
     const [couponCode, setCouponCode] = useState('');
     const [discount, setDiscount] = useState(0); 
     
+    const [isOrdering, setIsOrdering] = useState(false);
+    
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -38,7 +40,6 @@ const Checkout = () => {
     const subTotal = calculateSubTotal();
     const finalTotal = subTotal - discount; 
 
-    // HÀM ÁP DỤNG MÃ GIẢM GIÁ GỌI THẲNG LÊN BACKEND
     const handleApplyCoupon = async () => {
         if (!couponCode.trim()) {
             setDiscount(0);
@@ -52,7 +53,6 @@ const Checkout = () => {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             
-            // Backend trả về: { message: "Áp dụng mã thành công!", discount: 15 }
             const discountPercent = res.data.discount;
             const discountValue = subTotal * (discountPercent / 100);
             
@@ -67,12 +67,17 @@ const Checkout = () => {
 
     const handlePlaceOrder = async (e) => {
         e.preventDefault();
+        
+        if (isOrdering) return;
+
         const token = localStorage.getItem('token');
         if (!token) {
             Swal.fire('Yêu cầu', 'Đăng nhập để đặt hàng', 'warning');
             navigate('/login');
             return;
         }
+
+        setIsOrdering(true);
 
         try {
             const orderData = {
@@ -120,19 +125,28 @@ const Checkout = () => {
                     } catch (payError) {
                         console.error("Lỗi tạo link VNPAY:", payError);
                         Swal.fire('Lỗi', 'Cổng thanh toán đang bận, vui lòng thử lại!', 'error');
+                        setIsOrdering(false); 
                         return;
                     }
                 }
 
                 localStorage.removeItem('cart');
                 window.dispatchEvent(new Event('storage')); 
-                Swal.fire('Thành công', 'Đơn hàng đã được ghi nhận!', 'success').then(() => {
+                
+                Swal.fire({
+                    title: 'Thành công!', 
+                    text: 'Đơn hàng đã được ghi nhận!', 
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
                     navigate(`/order/${orderId}`); 
                 });
             }
         } catch (error) { 
             console.error("Lỗi đặt hàng:", error);
             Swal.fire('Lỗi', error.response?.data?.message || 'Không thể đặt hàng', 'error');
+            setIsOrdering(false); 
         }
     };
 
@@ -175,7 +189,18 @@ const Checkout = () => {
                             </select>
                         </div>
                     </div>
-                    <button type="submit" className="btn-submit">Hoàn tất đặt hàng</button>
+                    
+                    <button 
+                        type="submit" 
+                        className="btn-submit" 
+                        disabled={isOrdering}
+                        style={{ 
+                            background: isOrdering ? '#ccc' : '#ee4d2d', 
+                            cursor: isOrdering ? 'not-allowed' : 'pointer' 
+                        }}
+                    >
+                        {isOrdering ? <><i className="fa-solid fa-spinner fa-spin"></i> Đang xử lý...</> : 'Hoàn tất đặt hàng'}
+                    </button>
                 </form>
             </div>
 

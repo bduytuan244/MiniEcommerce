@@ -11,6 +11,8 @@ const Admin = () => {
     const [loginPassword, setLoginPassword] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
 
+    const [isProcessing, setIsProcessing] = useState(false);
+
     const [activeTab, setActiveTab] = useState('dashboard');
     const [dashboardData, setDashboardData] = useState({ revenue: 0, ordersCount: 0, completed: 0, pending: 0 });
     const [users, setUsers] = useState([]);
@@ -170,16 +172,25 @@ const Admin = () => {
     
     const createCoupon = async (e) => {
         e.preventDefault();
+        if (isProcessing) return;
+        setIsProcessing(true);
         try {
             await axios.post('http://localhost:5000/api/coupons', couponForm, getAuthHeader());
             Swal.fire('Thành công', 'Đã tạo mã giảm giá', 'success'); 
             setCouponForm({code:'', discount:'', expirationDate:''}); 
             fetchCoupons();
-        } catch (e) { Swal.fire('Lỗi', e.response?.data?.message || 'Không thể tạo mã', 'error'); }
+        } catch (e) { 
+            Swal.fire('Lỗi', e.response?.data?.message || 'Không thể tạo mã', 'error'); 
+        } finally {
+            setIsProcessing(false);
+        }
     };
     
     const handleSaveProduct = async (e) => {
         e.preventDefault();
+        if (isProcessing) return;
+        
+        setIsProcessing(true);
         Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         try {
             let finalImageUrl = formData.images?.[0] || '';
@@ -191,7 +202,9 @@ const Admin = () => {
                 const uploadRes = await axios.post('http://localhost:5000/api/upload', uploadForm, getAuthHeader());
                 finalImageUrl = uploadRes.data.imageUrl;
             } else if (!editProductId && !finalImageUrl) {
-                return Swal.fire('Lỗi', 'Vui lòng chọn ít nhất 1 ảnh!', 'warning');
+                Swal.fire('Lỗi', 'Vui lòng chọn ít nhất 1 ảnh!', 'warning');
+                setIsProcessing(false);
+                return;
             }
 
             const productData = {
@@ -215,6 +228,8 @@ const Admin = () => {
             setActiveTab('products');
         } catch(e) { 
             Swal.fire('Lỗi', e.response?.data?.message || 'Không thể lưu', 'error'); 
+        } finally {
+            setIsProcessing(false);
         }
     };
 
@@ -322,7 +337,12 @@ const Admin = () => {
                                 </div>
                                 <div style={{marginBottom:'15px'}}><label style={{fontWeight: 'bold'}}>Ảnh (1 ảnh)</label><br/><input type="file" accept="image/*" ref={fileInputRef} style={{marginTop: '5px'}}/></div>
                                 <div style={{marginBottom:'15px'}}><label style={{fontWeight: 'bold'}}>Mô tả</label><textarea rows="4" style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', marginTop: '5px'}} value={formData.description} onChange={e=>setFormData({...formData, description:e.target.value})}></textarea></div>
-                                <div style={{textAlign:'center'}}><button type="submit" style={{background:'#ee4d2d', color: 'white', border: 'none', padding:'10px 30px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer'}}>LƯU DỮ LIỆU</button></div>
+                                
+                                <div style={{textAlign:'center'}}>
+                                    <button type="submit" disabled={isProcessing} style={{background: isProcessing ? '#ccc' : '#ee4d2d', color: 'white', border: 'none', padding:'10px 30px', borderRadius: '6px', fontWeight: 'bold', cursor: isProcessing ? 'not-allowed' : 'pointer'}}>
+                                        {isProcessing ? 'ĐANG LƯU...' : 'LƯU DỮ LIỆU'}
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     )}
@@ -399,7 +419,10 @@ const Admin = () => {
                                     <div style={{flex:1}}><label style={{fontWeight: 'bold', marginBottom: '5px', display: 'block'}}>Mã Voucher</label><input type="text" required style={{width:'100%', padding:'10px', textTransform:'uppercase', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box'}} value={couponForm.code} onChange={e=>setCouponForm({...couponForm, code:e.target.value.toUpperCase()})}/></div>
                                     <div style={{flex:1}}><label style={{fontWeight: 'bold', marginBottom: '5px', display: 'block'}}>Giảm (%)</label><input type="number" required style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box'}} value={couponForm.discount} onChange={e=>setCouponForm({...couponForm, discount:e.target.value})}/></div>
                                     <div style={{flex:1}}><label style={{fontWeight: 'bold', marginBottom: '5px', display: 'block'}}>Hạn Dùng</label><input type="date" required style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box'}} value={couponForm.expirationDate} onChange={e=>setCouponForm({...couponForm, expirationDate:e.target.value})}/></div>
-                                    <button type="submit" style={{background:'#ee4d2d', color: 'white', border: 'none', padding:'12px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer'}}>Lưu Mã</button>
+                                    
+                                    <button type="submit" disabled={isProcessing} style={{background: isProcessing ? '#ccc' : '#ee4d2d', color: 'white', border: 'none', padding:'12px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: isProcessing ? 'not-allowed' : 'pointer'}}>
+                                        {isProcessing ? 'ĐANG LƯU...' : 'Lưu Mã'}
+                                    </button>
                                 </form>
                             </div>
                             <table style={{width: '100%', background: 'white', borderCollapse: 'collapse', borderRadius: '8px', overflow: 'hidden'}}>
