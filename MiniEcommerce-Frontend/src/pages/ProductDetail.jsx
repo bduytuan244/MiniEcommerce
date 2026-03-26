@@ -45,7 +45,7 @@ const ProductDetail = () => {
     });
   };
 
-  if (loading) return <div style={{textAlign: 'center', padding: '50px'}}>Đang tải thông tin...</div>;
+  if (loading) return <div style={{textAlign: 'center', padding: '50px'}}><i className="fa-solid fa-spinner fa-spin"></i> Đang tải thông tin...</div>;
   if (!product) return <div style={{textAlign: 'center', padding: '50px'}}>Không tìm thấy sản phẩm!</div>;
 
   const safePrice = typeof product.price === 'object' && product.price?.$numberDecimal ? product.price.$numberDecimal : product.price;
@@ -61,36 +61,43 @@ const ProductDetail = () => {
       }
   }
 
+  const actualStock = Number(product.countInStock ?? product.stock ?? 0);
+
+  const imgSrc = product.images && product.images.length > 0 
+      ? (product.images[0].startsWith('http') ? product.images[0] : `http://localhost:5000${product.images[0]}`)
+      : 'https://via.placeholder.com/400';
+
   const safeReviews = Array.isArray(product.reviews) ? product.reviews : [];
 
   return (
     <>
-      <div className="breadcrumb">
-        <Link to="/">Trang chủ</Link> <i className="fa-solid fa-angle-right" style={{ fontSize: '0.8em', margin: '0 5px' }}></i> Chi tiết sản phẩm
+      <div className="breadcrumb" style={{padding: '20px 0'}}>
+        <Link to="/" style={{color: '#0d6efd', textDecoration: 'none'}}>Trang chủ</Link> <i className="fa-solid fa-angle-right" style={{ fontSize: '0.8em', margin: '0 10px', color: '#888' }}></i> <span style={{color: '#666'}}>Chi tiết sản phẩm</span>
       </div>
 
-      <div className="detail-container">
-        <div className="left-column">
+      <div className="detail-container" style={{display: 'flex', gap: '40px', background: 'white', padding: '30px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)'}}>
+        <div className="left-column" style={{flex: '1', textAlign: 'center'}}>
           <img 
-            src={product.images && product.images.length > 0 ? `http://localhost:5000${product.images[0]}` : 'https://via.placeholder.com/400'} 
+            src={imgSrc} 
             alt={safeName} 
+            style={{maxWidth: '100%', borderRadius: '8px', border: '1px solid #eee', objectFit: 'contain', maxHeight: '400px'}}
           />
         </div>
         
-        <div className="right-column">
-          <h1 className="product-title">{safeName}</h1>
+        <div className="right-column" style={{flex: '1.5'}}>
+          <h1 className="product-title" style={{marginTop: 0, fontSize: '1.8rem', color: '#333'}}>{safeName}</h1>
           
-          <div className="product-meta">
-            <span>Danh mục: {safeCategory}</span>
-            <span>|</span>
-            <span>Kho: {product.countInStock > 0 ? product.countInStock : 'Hết hàng'}</span>
+          <div className="product-meta" style={{marginBottom: '20px', color: '#666'}}>
+            <span style={{marginRight: '15px'}}>Danh mục: <strong style={{color: '#0d6efd'}}>{safeCategory}</strong></span>
+            <span style={{marginRight: '15px'}}>|</span>
+            <span>Kho: <strong style={{color: actualStock > 0 ? '#198754' : '#dc3545'}}>{actualStock > 0 ? actualStock : 'Hết hàng'}</strong></span>
           </div>
           
-          <div className="price-box">
-            <p className="product-price">{safePrice ? Number(safePrice).toLocaleString('vi-VN') : '0'} đ</p>
+          <div className="price-box" style={{background: '#fafafa', padding: '15px 20px', borderRadius: '8px', marginBottom: '25px', border: '1px solid #eee'}}>
+            <p className="product-price" style={{fontSize: '2rem', fontWeight: 'bold', color: '#ee4d2d', margin: 0}}>{safePrice ? Number(safePrice).toLocaleString('vi-VN') : '0'} đ</p>
           </div>
           
-          <div style={{marginBottom: '20px'}}>
+          <div style={{marginBottom: '30px', lineHeight: '1.6', color: '#444'}}>
             <p>{safeDesc || 'Chưa có mô tả cho sản phẩm này.'}</p>
           </div>
 
@@ -98,18 +105,34 @@ const ProductDetail = () => {
             <button 
                 className="btn-buy" 
                 onClick={handleAddToCart}
-                disabled={product.countInStock === 0}
-                style={{ background: product.countInStock === 0 ? '#ccc' : '#ee4d2d' }}
+                disabled={actualStock <= 0}
+                style={{ 
+                    background: actualStock <= 0 ? '#ccc' : '#ee4d2d', 
+                    color: 'white',
+                    border: 'none',
+                    padding: '15px 30px',
+                    fontSize: '1.1rem',
+                    fontWeight: 'bold',
+                    borderRadius: '8px',
+                    cursor: actualStock <= 0 ? 'not-allowed' : 'pointer',
+                    transition: '0.2s',
+                    width: '100%',
+                    maxWidth: '300px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px'
+                }}
             >
-              <i className="fa-solid fa-cart-plus"></i> Thêm vào giỏ hàng
+              <i className="fa-solid fa-cart-plus"></i> {actualStock <= 0 ? 'TẠM HẾT HÀNG' : 'THÊM VÀO GIỎ HÀNG'}
             </button>
           </div>
         </div>
       </div>
 
-      <div className="review-section">
-        <h2>Khách hàng đánh giá</h2>
-        <div id="review-list">
+      <div className="review-section" style={{background: 'white', padding: '30px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginTop: '30px'}}>
+        <h2 style={{borderBottom: '2px solid #eee', paddingBottom: '10px'}}>Khách hàng đánh giá</h2>
+        <div id="review-list" style={{marginTop: '20px'}}>
           {safeReviews.length > 0 ? (
             safeReviews.map((review, index) => {
               const safeComment = typeof review.comment === 'object' ? JSON.stringify(review.comment) : review.comment;
@@ -118,7 +141,7 @@ const ProductDetail = () => {
               return (
                 <div key={review._id || index} style={{ borderBottom: '1px solid #eee', paddingBottom: '15px', marginBottom: '15px' }}>
                   <p style={{ fontWeight: 'bold', margin: '0 0 5px', color: '#333' }}>
-                    <i className="fa-solid fa-user-circle"></i> {reviewerName}
+                    <i className="fa-solid fa-user-circle" style={{color: '#888', marginRight: '5px'}}></i> {reviewerName}
                   </p>
                   
                   <p style={{ color: '#ffce3d', margin: '0 0 10px', fontSize: '0.9rem' }}>
@@ -132,7 +155,7 @@ const ProductDetail = () => {
               );
             })
           ) : (
-            <p style={{ textAlign: 'center', color: '#666' }}>Chưa có đánh giá nào cho sản phẩm này.</p>
+            <p style={{ textAlign: 'center', color: '#888', padding: '20px' }}><i className="fa-regular fa-comment-dots" style={{fontSize: '2rem', display: 'block', marginBottom: '10px'}}></i>Chưa có đánh giá nào cho sản phẩm này.</p>
           )}
         </div>
       </div>

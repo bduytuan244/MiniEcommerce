@@ -41,7 +41,7 @@ const Header = () => {
           <span className="cart-badge">{cartCount}</span>
         </Link>
         
-        {(user?.role === 'seller' || user?.role === 'admin') ? (
+        {(user?.isSeller || user?.isAdmin) ? (
           <Link to="/seller" className="link-seller-center">
             <i className="fa-solid fa-store"></i> Kênh Người Bán
           </Link>

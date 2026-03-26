@@ -31,7 +31,7 @@ exports.createPaymentUrl = async (req, res) => {
             ('0' + date.getMinutes()).slice(-2) +
             ('0' + date.getSeconds()).slice(-2);
         
-        let ipAddr = '127.0.0.1'; 
+        let ipAddr = '127.0.0.1';
         let tmnCode = 'CGXZLS0Z';
         let secretKey = 'XNBCJFAKAZQSGTARRLGCHVZWCIOIGSHN';
         let vnpUrl = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
@@ -45,9 +45,7 @@ exports.createPaymentUrl = async (req, res) => {
         vnp_Params['vnp_TmnCode'] = tmnCode;
         vnp_Params['vnp_Locale'] = 'vn';
         vnp_Params['vnp_CurrCode'] = 'VND';
-        
         vnp_Params['vnp_TxnRef'] = transactionId + '-' + date.getTime().toString(); 
-        
         vnp_Params['vnp_OrderInfo'] = 'ThanhToanDonHangVNPAY';
         vnp_Params['vnp_OrderType'] = 'other';
         vnp_Params['vnp_Amount'] = amount;
@@ -68,7 +66,7 @@ exports.createPaymentUrl = async (req, res) => {
         let signString = signData.join('&');
 
         let hmac = crypto.createHmac("sha512", secretKey);
-        let signed = hmac.update(new Buffer.from(signString, 'utf-8')).digest("hex"); 
+        let signed = hmac.update(Buffer.from(signString, 'utf-8')).digest("hex"); 
         
         let finalUrl = vnpUrl + '?' + signString + '&vnp_SecureHash=' + signed;
 
@@ -98,7 +96,9 @@ exports.vnpayReturn = async (req, res) => {
     }
     let signString = signData.join('&');
     let hmac = crypto.createHmac("sha512", secretKey);
-    let signed = hmac.update(new Buffer.from(signString, 'utf-8')).digest("hex");     
+    let signed = hmac.update(Buffer.from(signString, 'utf-8')).digest("hex");    
+
+    const frontendUrl = 'http://localhost:5173';
 
     if(secureHash === signed){
         if(vnp_Params['vnp_ResponseCode'] == '00') {
@@ -123,12 +123,11 @@ exports.vnpayReturn = async (req, res) => {
                     paymentMethod: 'VNPAY'
                 });
             }
-            
-            res.redirect('http://127.0.0.1:5500/home/index.html?payment=success'); 
+            res.redirect(`${frontendUrl}/profile?payment=success`); 
         } else {
-            res.redirect('http://127.0.0.1:5500/home/index.html?payment=failed');
+            res.redirect(`${frontendUrl}/cart?payment=failed`);
         }
-    } else{
-        res.redirect('http://127.0.0.1:5500/home/index.html?payment=invalid');
+    } else {
+        res.redirect(`${frontendUrl}/cart?payment=invalid`);
     }
 };

@@ -12,10 +12,13 @@ const Home = () => {
   const [priceRange, setPriceRange] = useState('');
   const [sort, setSort] = useState('-createdAt');
   const [page, setPage] = useState(1);
+  
+  // THÊM STATE ĐỂ LƯU TỔNG SỐ TRANG
+  const [totalPages, setTotalPages] = useState(1);
 
   const fetchBrands = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/products');
+      const res = await axios.get('http://localhost:5000/api/products?limit=1000'); // Lấy nhiều xíu để lọc đủ Brand
       const allProducts = res.data.products || res.data;
       const uniqueBrands = [...new Set(allProducts.map(p => p.brand))].filter(b => b);
       setBrands(uniqueBrands);
@@ -24,6 +27,7 @@ const Home = () => {
     }
   };
 
+  // CHUYỂN HÀM NÀY VÀO TRONG ĐỂ TIỆN SỬ DỤNG
   const fetchProducts = async () => {
     setLoading(true);
     try {
@@ -38,6 +42,14 @@ const Home = () => {
 
       const res = await axios.get(url);
       setProducts(res.data.products || res.data);
+      
+      // FIX: Cập nhật tổng số trang từ Backend trả về
+      if (res.data.totalPages) {
+        setTotalPages(res.data.totalPages);
+      } else {
+        setTotalPages(1); // Mặc định nếu backend không trả về
+      }
+      
     } catch (error) {
       console.error("Lỗi lấy sản phẩm:", error);
     } finally {
@@ -51,6 +63,7 @@ const Home = () => {
 
   useEffect(() => {
     fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, sort]);
 
   const handleApplyFilters = () => {
@@ -106,23 +119,33 @@ const Home = () => {
 
       <div id="product-list">
         {loading ? (
-          <p style={{ textAlign: 'center', width: '100%' }}><i className="fa-solid fa-spinner fa-spin"></i> Đang tải...</p>
+          <p style={{ textAlign: 'center', width: '100%', fontSize: '1.2rem', color: '#666', padding: '40px 0' }}><i className="fa-solid fa-spinner fa-spin"></i> Đang tải sản phẩm...</p>
         ) : products.length === 0 ? (
-          <p style={{ textAlign: 'center', width: '100%' }}>Không tìm thấy sản phẩm phù hợp.</p>
+          <p style={{ textAlign: 'center', width: '100%', fontSize: '1.2rem', color: '#888', padding: '40px 0' }}>Không tìm thấy sản phẩm phù hợp.</p>
         ) : (
           products.map((item) => {
              const safePrice = typeof item.price === 'object' && item.price?.$numberDecimal 
                 ? Number(item.price.$numberDecimal) 
                 : Number(item.price || 0);
 
+             // FIX: Logic kiểm tra link ảnh thông minh
+             const imgSrc = item.images && item.images.length > 0 
+                ? (item.images[0].startsWith('http') ? item.images[0] : `http://localhost:5000${item.images[0]}`)
+                : 'https://via.placeholder.com/200';
+
              return (
               <Link to={`/product/${item._id}`} key={item._id} className="product-card" style={{ textDecoration: 'none' }}>
                 <img 
-                  src={item.images && item.images.length > 0 ? `http://localhost:5000${item.images[0]}` : 'https://via.placeholder.com/200'} 
+                  src={imgSrc} 
                   alt={item.name} 
+                  style={{objectFit: 'contain', background: '#fff'}}
                 />
-                <h3>{item.name}</h3>
+                <h3 style={{color: '#333'}}>{item.name}</h3>
                 <p className="price">{safePrice.toLocaleString('vi-VN')} đ</p>
+                {/* Thêm tag hết hàng ở ngoài Home luôn cho xịn */}
+                {(item.countInStock === 0 || item.stock === 0) && (
+                    <span style={{background: '#dc3545', color: 'white', fontSize: '0.8rem', padding: '3px 8px', borderRadius: '4px', position: 'absolute', top: '10px', left: '10px'}}>Hết hàng</span>
+                )}
               </Link>
              )
           })
@@ -130,9 +153,23 @@ const Home = () => {
       </div>
 
       <div className="pagination">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))}>Trước</button>
-          <button className="active">{page}</button>
-          <button onClick={() => setPage(p => p + 1)}>Sau</button>
+          <button 
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            style={{ opacity: page === 1 ? 0.5 : 1, cursor: page === 1 ? 'not-allowed' : 'pointer' }}
+          >
+            Trước
+          </button>
+          
+          <button className="active">{page} / {totalPages}</button>
+          
+          <button 
+            onClick={() => setPage(p => p + 1)}
+            disabled={page >= totalPages}
+            style={{ opacity: page >= totalPages ? 0.5 : 1, cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}
+          >
+            Sau
+          </button>
       </div>
     </>
   );
