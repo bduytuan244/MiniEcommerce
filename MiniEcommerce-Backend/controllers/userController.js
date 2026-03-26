@@ -1,16 +1,29 @@
 const User = require('../models/User');
 
-// Get
 exports.getUsers = async (req, res) => {
   try {
-    const users = await User.find().select('-password');
-    res.status(200).json(users);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const total = await User.countDocuments();
+    const users = await User.find()
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({
+      users,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      totalUsers: total
+    });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
 
-// delete
 exports.deleteUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -66,14 +79,6 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-exports.getAllUsers = async (req, res) => {
-  try {
-    const users = await User.find({}).select('-password').sort({ createdAt: -1 });
-    res.status(200).json(users);
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi lấy danh sách: " + error.message });
-  }
-};
 
 exports.deleteUser = async (req, res) => {
     try {

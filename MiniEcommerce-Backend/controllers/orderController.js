@@ -144,51 +144,6 @@ exports.createOrder = async (req, res) => {
     }
 };
 
-exports.getOrders = async (req, res) => {
-    try {
-        const { status, customer, product, date } = req.query;
-        let queryConditions = {};
-
-        if (status && status !== 'Tất cả') {
-            queryConditions.status = status;
-        }
-
-        if (product) {
-            queryConditions['orderItems.name'] = { $regex: product, $options: 'i' };
-        }
-
-        if (date) {
-            const startDate = new Date(date);
-            startDate.setHours(0, 0, 0, 0);
-            
-            const endDate = new Date(date);
-            endDate.setHours(23, 59, 59, 999);
-
-            queryConditions.createdAt = {
-                $gte: startDate,
-                $lte: endDate
-            };
-        }
-
-        let orders = await Order.find(queryConditions)
-            .populate('user', 'id name email')
-            .sort({ createdAt: -1 });
-
-        if (customer) {
-            const keyword = customer.toLowerCase();
-            orders = orders.filter(order => {
-                const name1 = order.customerName ? order.customerName.toLowerCase() : '';
-                const name2 = (order.user && order.user.name) ? order.user.name.toLowerCase() : '';
-                return name1.includes(keyword) || name2.includes(keyword);
-            });
-        }
-
-        res.status(200).json(orders);
-    } catch (error) { 
-        res.status(500).json({ message: error.message }); 
-    }
-};
-
 exports.updateOrderStatus = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);
@@ -327,25 +282,90 @@ exports.cancelOrder = async (req, res) => {
     }
 };
 
+exports.getOrders = async (req, res) => {
+    try {
+        const { status, customer, product, date, page = 1, limit = 10 } = req.query;
+        let queryConditions = {};
+
+        if (status && status !== 'Tất cả') {
+            queryConditions.status = status;
+        }
+
+        if (product) {
+            queryConditions['orderItems.name'] = { $regex: product, $options: 'i' };
+        }
+
+        if (customer) {
+            queryConditions.customerName = { $regex: customer, $options: 'i' };
+        }
+
+        if (date) {
+            const startDate = new Date(date);
+            startDate.setHours(0, 0, 0, 0);
+            
+            const endDate = new Date(date);
+            endDate.setHours(23, 59, 59, 999);
+
+            queryConditions.createdAt = {
+                $gte: startDate,
+                $lte: endDate
+            };
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const total = await Order.countDocuments(queryConditions);
+
+        const orders = await Order.find(queryConditions)
+            .populate('user', 'id name email')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        res.status(200).json({
+            orders,
+            totalPages: Math.ceil(total / limit),
+            currentPage: parseInt(page),
+            totalOrders: total
+        });
+    } catch (error) { 
+        res.status(500).json({ message: error.message }); 
+    }
+};
+
 exports.getSellerOrders = async (req, res) => {
     try {
         const sellerId = req.user._id || req.user.id;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
 
         const myProducts = await Product.find({ seller_id: sellerId }).select('_id');
         const myProductIds = myProducts.map(p => p._id);
 
         if (myProductIds.length === 0) {
-            return res.status(200).json([]); 
+            return res.status(200).json({ orders: [], totalPages: 1, currentPage: 1 }); 
         }
 
-        const orders = await Order.find({
+        const queryConditions = {
             $or: [
                 { 'orderItems.product': { $in: myProductIds } },
                 { 'orderItems.productId': { $in: myProductIds } }
             ]
-        }).sort({ createdAt: -1 }).populate('user', 'name email');
+        };
 
-        res.status(200).json(orders);
+        const skip = (page - 1) * limit;
+        const total = await Order.countDocuments(queryConditions);
+
+        const orders = await Order.find(queryConditions)
+            .sort({ createdAt: -1 })
+            .populate('user', 'name email')
+            .skip(skip)
+            .limit(limit);
+
+        res.status(200).json({
+            orders,
+            totalPages: Math.ceil(total / limit),
+            currentPage: page
+        });
     } catch (error) {
         console.error("Lỗi lấy đơn hàng cho Seller:", error);
         res.status(500).json({ message: "Lỗi Server" });
