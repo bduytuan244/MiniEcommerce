@@ -13,6 +13,7 @@ import OrderDetail from './pages/OrderDetail';
 import Footer from './components/Footer';
 import Checkout from './pages/Checkout';
 import Seller from './pages/Seller'; 
+import Admin from './pages/Admin';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
           <Route path="/checkout" element={<Checkout />} />
           
           <Route path="/seller" element={<Seller />} />
+          <Route path="/admin" element={<Admin />} />
         </Routes>
       </div>
       <Footer />
