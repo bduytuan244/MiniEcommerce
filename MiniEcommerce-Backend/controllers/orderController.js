@@ -171,9 +171,9 @@ exports.updateOrderStatus = async (req, res) => {
             if (newStatus !== 'Hoàn thành') {
                 return res.status(403).json({ message: "Người mua chỉ được phép xác nhận Đã nhận hàng!" });
             }
-            if (order.status !== 'Đang vận chuyển') {
-                return res.status(400).json({ message: "Đơn hàng chưa được giao, không thể xác nhận!" });
-            }
+            // if (order.status !== 'Đang vận chuyển') {
+            //     return res.status(400).json({ message: "Đơn hàng chưa được giao, không thể xác nhận!" });
+            // }
         }
 
         if (isSeller && !isAdmin) {
