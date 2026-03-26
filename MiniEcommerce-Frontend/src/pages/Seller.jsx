@@ -9,14 +9,20 @@ const Seller = () => {
     const [shopName, setShopName] = useState('...');
     const [editProductId, setEditProductId] = useState(null);
 
-    // THÊM CHỐT CHẶN CHỐNG SPAM CLICK
     const [isProcessing, setIsProcessing] = useState(false);
 
     const [dashboardData, setDashboardData] = useState({ totalProducts: 0, totalOrders: 0 });
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
+    
+    const [productPage, setProductPage] = useState(1);
+    const [productTotalPages, setProductTotalPages] = useState(1);
+    const [orderPage, setOrderPage] = useState(1);
+    const [orderTotalPages, setOrderTotalPages] = useState(1);
 
-    const [formData, setFormData] = useState({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '', images: [] });
+    const [categories, setCategories] = useState([]);
+
+    const [formData, setFormData] = useState({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '' });
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -39,38 +45,44 @@ const Seller = () => {
         if (activeTab === 'dashboard') fetchDashboardData();
         if (activeTab === 'products') fetchProducts();
         if (activeTab === 'orders') fetchOrders();
-        if (activeTab === 'add-product' && editProductId) fetchProductDetail(editProductId);
-        if (activeTab === 'add-product' && !editProductId) {
-            setFormData({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '', images: [] });
+        if (activeTab === 'add-product') {
+            fetchCategories(); 
+            if (editProductId) {
+                fetchProductDetail(editProductId);
+            } else {
+                setFormData({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '' });
+            }
         }
-    }, [activeTab, editProductId]);
+    }, [activeTab, editProductId, productPage, orderPage]);
 
     const getAuthHeader = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
 
     const fetchDashboardData = async () => {
         try {
             const [resProd, resOrder] = await Promise.all([
-                axios.get('http://localhost:5000/api/products/myshop', getAuthHeader()),
-                axios.get('http://localhost:5000/api/orders/myshop', getAuthHeader())
+                axios.get('http://localhost:5000/api/products/myshop?limit=10000', getAuthHeader()),
+                axios.get('http://localhost:5000/api/orders/myshop?limit=10000', getAuthHeader())
             ]);
             setDashboardData({
-                totalProducts: resProd.data.products?.length || 0,
-                totalOrders: resOrder.data?.length || 0
+                totalProducts: resProd.data.totalProducts || resProd.data.products?.length || 0,
+                totalOrders: resOrder.data.totalOrders || resOrder.data.orders?.length || resOrder.data?.length || 0
             });
         } catch (error) { console.error("Lỗi tải dashboard", error); }
     };
 
     const fetchProducts = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/products/myshop', getAuthHeader());
+            const res = await axios.get(`http://localhost:5000/api/products/myshop?page=${productPage}&limit=5`, getAuthHeader());
             setProducts(res.data.products || []);
+            setProductTotalPages(res.data.totalPages || 1);
         } catch (error) { console.error("Lỗi tải sản phẩm", error); }
     };
 
     const fetchOrders = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/orders/myshop', getAuthHeader());
-            setOrders(res.data || []);
+            const res = await axios.get(`http://localhost:5000/api/orders/myshop?page=${orderPage}&limit=5`, getAuthHeader());
+            setOrders(res.data.orders || res.data || []);
+            setOrderTotalPages(res.data.totalPages || 1);
         } catch (error) { console.error("Lỗi tải đơn hàng", error); }
     };
 
@@ -80,6 +92,15 @@ const Seller = () => {
             const p = res.data;
             setFormData({ ...p, countInStock: p.countInStock || p.stock || 0 });
         } catch (error) { console.error("Lỗi tải chi tiết SP", error); }
+    };
+
+    const fetchCategories = async () => {
+        try {
+            const res = await axios.get('http://localhost:5000/api/categories'); 
+            setCategories(res.data);
+        } catch (error) {
+            console.error("Lỗi tải danh mục", error);
+        }
     };
 
     const handleLogout = () => {
@@ -94,7 +115,8 @@ const Seller = () => {
             try {
                 await axios.delete(`http://localhost:5000/api/products/${id}`, getAuthHeader());
                 Swal.fire('Thành công', 'Đã xóa sản phẩm', 'success');
-                fetchProducts();
+                if (products.length === 1 && productPage > 1) setProductPage(p => p - 1);
+                else fetchProducts();
             } catch (error) { Swal.fire('Lỗi', 'Không thể xóa', 'error'); }
         }
     };
@@ -107,52 +129,49 @@ const Seller = () => {
         } catch (error) { Swal.fire('Lỗi', error.response?.data?.message || 'Lỗi cập nhật', 'error'); }
     };
 
-    // ĐÃ ÁP DỤNG PHANH CHỐNG SPAM KHI LƯU
     const handleSaveProduct = async (e) => {
         e.preventDefault();
-        if (isProcessing) return; // Nếu đang xử lý thì chặn luôn
+        if (isProcessing) return; 
         
-        setIsProcessing(true); // Khóa nút
+        setIsProcessing(true); 
         Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         
         try {
-            let finalImageUrl = formData.images?.[0] || '';
             const files = fileInputRef.current.files;
             
-            if (files.length > 0) {
-                const uploadForm = new FormData();
-                uploadForm.append('image', files[0]); 
-                const uploadRes = await axios.post('http://localhost:5000/api/upload', uploadForm, getAuthHeader());
-                finalImageUrl = uploadRes.data.imageUrl;
-            } else if (!editProductId && !finalImageUrl) {
+            if (!editProductId && files.length === 0) {
                 Swal.fire('Lỗi', 'Vui lòng chọn ít nhất 1 ảnh!', 'warning');
-                setIsProcessing(false); // Mở lại nút nếu có lỗi
+                setIsProcessing(false);
                 return;
             }
 
-            const productData = {
-                name: formData.name,
-                price: Number(formData.price),
-                countInStock: Number(formData.countInStock), 
-                brand: formData.brand,
-                category: formData.category,
-                description: formData.description,
-                images: [finalImageUrl]
-            };
-
-            if (editProductId) {
-                await axios.put(`http://localhost:5000/api/products/${editProductId}`, productData, getAuthHeader());
-            } else {
-                await axios.post('http://localhost:5000/api/products', productData, getAuthHeader());
+            const form = new FormData();
+            form.append('name', formData.name);
+            form.append('price', formData.price);
+            form.append('countInStock', formData.countInStock); 
+            form.append('brand', formData.brand);
+            form.append('category', formData.category);
+            form.append('description', formData.description);
+            
+            if (files.length > 0) {
+                for (let i = 0; i < files.length; i++) {
+                    form.append('images', files[i]);
+                }
             }
+
+            const url = editProductId ? `http://localhost:5000/api/products/${editProductId}` : 'http://localhost:5000/api/products';
+            const method = editProductId ? 'put' : 'post';
+
+            await axios[method](url, form, getAuthHeader());
             
             Swal.fire('Thành công!', 'Lưu sản phẩm thành công.', 'success');
             setEditProductId(null);
             setActiveTab('products');
+            setProductPage(1); 
         } catch (error) {
             Swal.fire('Lỗi', error.response?.data?.message || 'Lỗi lưu sản phẩm', 'error');
         } finally {
-            setIsProcessing(false); // Mở lại nút khi hoàn thành (hoặc có lỗi từ server)
+            setIsProcessing(false);
         }
     };
 
@@ -162,8 +181,10 @@ const Seller = () => {
                 <h2 onClick={() => navigate('/')} title="Về trang mua sắm"><i className="fa-solid fa-store"></i> SELLER CENTER</h2>
                 <ul className="seller-menu">
                     <li className={activeTab === 'dashboard' ? 'active' : ''} onClick={() => setActiveTab('dashboard')}><i className="fa-solid fa-chart-line"></i> Bảng điều khiển</li>
-                    <li className={activeTab === 'products' || activeTab === 'add-product' ? 'active' : ''} onClick={() => {setEditProductId(null); setActiveTab('products');}}><i className="fa-solid fa-box"></i> Kho sản phẩm</li>
-                    <li className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}><i className="fa-solid fa-clipboard-list"></i> Quản lý đơn hàng</li>
+                    
+                    <li className={activeTab === 'products' || activeTab === 'add-product' ? 'active' : ''} onClick={() => {setEditProductId(null); setActiveTab('products'); setProductPage(1);}}><i className="fa-solid fa-box"></i> Kho sản phẩm</li>
+                    <li className={activeTab === 'orders' ? 'active' : ''} onClick={() => {setActiveTab('orders'); setOrderPage(1);}}><i className="fa-solid fa-clipboard-list"></i> Quản lý đơn hàng</li>
+                    
                     <li style={{marginTop: '15px', borderTop: '1px dashed #ddd', paddingTop: '5px', color: '#0d6efd'}} onClick={() => navigate('/')}>
                         <i className="fa-solid fa-house-user"></i> Về trang mua sắm
                     </li>
@@ -204,12 +225,10 @@ const Seller = () => {
                                     {products.length === 0 ? <tr><td colSpan="5" style={{textAlign:'center'}}>Chưa có sản phẩm nào.</td></tr> : 
                                         products.map(p => (
                                             <tr key={p._id}>
-                                                <td><img src={p.images?.[0]?.startsWith('http') ? p.images[0] : `http://localhost:5000${p.images?.[0]}`} width="50" height="50" style={{objectFit:'contain', borderRadius:'6px', border:'1px solid #eee', background:'white'}} /></td>
+                                                <td style={{padding: '10px'}}><img src={p.images?.[0]?.startsWith('http') ? p.images[0] : `http://localhost:5000${p.images?.[0]}`} width="50" height="50" style={{objectFit:'contain', borderRadius:'6px', border:'1px solid #eee', background:'white'}} /></td>
                                                 <td><strong>{p.name}</strong></td>
                                                 <td style={{color:'#ee4d2d', fontWeight:'bold'}}>{Number(p.price || p.price?.$numberDecimal || 0).toLocaleString('vi-VN')} đ</td>
-                                                
                                                 <td style={{textAlign:'center'}}><span style={{padding: '4px 10px', borderRadius: '12px', background: p.countInStock > 0 || p.stock > 0 ? '#e6f4ea' : '#f8d7da', color: p.countInStock > 0 || p.stock > 0 ? '#1e7e34' : '#721c24', fontWeight: 'bold'}}>{p.countInStock || p.stock || 0}</span></td>
-                                                
                                                 <td style={{textAlign:'center'}}>
                                                     <button className="btn-seller btn-edit" style={{marginRight: '5px'}} onClick={() => { setEditProductId(p._id); setActiveTab('add-product'); }}><i className="fa-solid fa-pen"></i></button>
                                                     <button className="btn-seller btn-delete" onClick={() => handleDeleteProduct(p._id)}><i className="fa-solid fa-trash"></i></button>
@@ -219,6 +238,26 @@ const Seller = () => {
                                     }
                                 </tbody>
                             </table>
+                            
+                            {productTotalPages > 1 && (
+                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '20px' }}>
+                                    <button 
+                                        className="btn-seller" 
+                                        style={{background: '#6c757d', padding: '8px 15px', opacity: productPage === 1 ? 0.5 : 1, cursor: productPage === 1 ? 'not-allowed' : 'pointer'}} 
+                                        disabled={productPage === 1} 
+                                        onClick={() => setProductPage(p => p - 1)}
+                                    ><i className="fa-solid fa-chevron-left"></i> Trước</button>
+                                    
+                                    <span style={{fontWeight: 'bold', color: '#555'}}>Trang {productPage} / {productTotalPages}</span>
+                                    
+                                    <button 
+                                        className="btn-seller" 
+                                        style={{background: '#6c757d', padding: '8px 15px', opacity: productPage >= productTotalPages ? 0.5 : 1, cursor: productPage >= productTotalPages ? 'not-allowed' : 'pointer'}} 
+                                        disabled={productPage >= productTotalPages} 
+                                        onClick={() => setProductPage(p => p + 1)}
+                                    >Sau <i className="fa-solid fa-chevron-right"></i></button>
+                                </div>
+                            )}
                         </>
                     )}
 
@@ -233,19 +272,26 @@ const Seller = () => {
                                 </div>
                                 <div style={{display:'flex', gap:'20px'}}>
                                     <div className="seller-form-group" style={{flex:1}}><label>Thương hiệu</label><input type="text" required value={formData.brand} onChange={e => setFormData({...formData, brand: e.target.value})} /></div>
-                                    <div className="seller-form-group" style={{flex:1}}><label>Danh mục</label><input type="text" required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} /></div>
+                                    <div className="seller-form-group" style={{flex:1}}>
+                                        <label>Danh mục</label>
+                                        <select required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box'}}>
+                                            <option value="">-- Chọn danh mục --</option>
+                                            {categories.map(c => (
+                                                <option key={c._id} value={c.name}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                                 <div className="seller-form-group">
-                                    <label>Ảnh sản phẩm (1 ảnh đại diện)</label>
+                                    <label>Ảnh sản phẩm</label>
                                     <div className="seller-file-upload">
                                         <i className="fa-solid fa-cloud-arrow-up" style={{fontSize:'2rem', color:'#ee4d2d', marginBottom:'10px'}}></i><br/>
-                                        <input type="file" ref={fileInputRef} accept="image/*" />
+                                        <input type="file" ref={fileInputRef} accept="image/*" multiple />
                                     </div>
                                     <small style={{color:'#888'}}>* Nếu sửa sản phẩm mà không chọn ảnh mới, hệ thống sẽ giữ lại ảnh cũ.</small>
                                 </div>
                                 <div className="seller-form-group"><label>Mô tả chi tiết</label><textarea rows="5" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})}></textarea></div>
                                 <div style={{textAlign:'center'}}>
-                                    {/* NÚT LƯU BỊ DISABLED VÀ ĐỔI CHỮ KHI ĐANG XỬ LÝ */}
                                     <button 
                                         type="submit" 
                                         disabled={isProcessing}
@@ -289,6 +335,26 @@ const Seller = () => {
                                     }
                                 </tbody>
                             </table>
+                            
+                            {orderTotalPages > 1 && (
+                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '20px' }}>
+                                    <button 
+                                        className="btn-seller" 
+                                        style={{background: '#6c757d', padding: '8px 15px', opacity: orderPage === 1 ? 0.5 : 1, cursor: orderPage === 1 ? 'not-allowed' : 'pointer'}} 
+                                        disabled={orderPage === 1} 
+                                        onClick={() => setOrderPage(p => p - 1)}
+                                    ><i className="fa-solid fa-chevron-left"></i> Trước</button>
+                                    
+                                    <span style={{fontWeight: 'bold', color: '#555'}}>Trang {orderPage} / {orderTotalPages}</span>
+                                    
+                                    <button 
+                                        className="btn-seller" 
+                                        style={{background: '#6c757d', padding: '8px 15px', opacity: orderPage >= orderTotalPages ? 0.5 : 1, cursor: orderPage >= orderTotalPages ? 'not-allowed' : 'pointer'}} 
+                                        disabled={orderPage >= orderTotalPages} 
+                                        onClick={() => setOrderPage(p => p + 1)}
+                                    >Sau <i className="fa-solid fa-chevron-right"></i></button>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>

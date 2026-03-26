@@ -93,12 +93,17 @@ const Cart = () => {
               
               const safeName = typeof item.name === 'object' ? JSON.stringify(item.name) : item.name;
 
+              // FIX LỖI ĐƯỜNG DẪN ẢNH CHUẨN XÁC
+              const imgSrc = item.images && item.images.length > 0 
+                ? (item.images[0].startsWith('http') ? item.images[0] : `http://localhost:5000${item.images[0]}`)
+                : 'https://via.placeholder.com/80';
+
               return (
                 <tr key={item._id}>
                   <td>
                     <div className="product-col">
                       <img 
-                        src={item.images && item.images.length > 0 ? `http://localhost:5000${item.images[0]}` : 'https://via.placeholder.com/80'} 
+                        src={imgSrc} 
                         alt={safeName} 
                         className="cart-img"
                       />

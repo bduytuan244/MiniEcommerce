@@ -8,17 +8,18 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
 
   const [keyword, setKeyword] = useState('');
+  
+  const [debouncedKeyword, setDebouncedKeyword] = useState('');
+
   const [brand, setBrand] = useState('');
   const [priceRange, setPriceRange] = useState('');
   const [sort, setSort] = useState('-createdAt');
   const [page, setPage] = useState(1);
-  
-  // THÊM STATE ĐỂ LƯU TỔNG SỐ TRANG
   const [totalPages, setTotalPages] = useState(1);
 
   const fetchBrands = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/products?limit=1000'); // Lấy nhiều xíu để lọc đủ Brand
+      const res = await axios.get('http://localhost:5000/api/products?limit=1000');
       const allProducts = res.data.products || res.data;
       const uniqueBrands = [...new Set(allProducts.map(p => p.brand))].filter(b => b);
       setBrands(uniqueBrands);
@@ -27,49 +28,52 @@ const Home = () => {
     }
   };
 
-  // CHUYỂN HÀM NÀY VÀO TRONG ĐỂ TIỆN SỬ DỤNG
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      let url = `http://localhost:5000/api/products?keyword=${keyword}&sort=${sort}&page=${page}`;
-      
-      if (brand) url += `&brand=${brand}`;
-      
-      if (priceRange) {
-        const [min, max] = priceRange.split('-');
-        url += `&minPrice=${min}&maxPrice=${max}`; 
-      }
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedKeyword(keyword);
+    }, 500);
 
-      const res = await axios.get(url);
-      setProducts(res.data.products || res.data);
-      
-      // FIX: Cập nhật tổng số trang từ Backend trả về
-      if (res.data.totalPages) {
-        setTotalPages(res.data.totalPages);
-      } else {
-        setTotalPages(1); // Mặc định nếu backend không trả về
+    return () => clearTimeout(timer);
+  }, [keyword]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedKeyword, brand, priceRange, sort]);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        let url = `http://localhost:5000/api/products?keyword=${debouncedKeyword}&sort=${sort}&page=${page}`;
+        
+        if (brand) url += `&brand=${brand}`;
+        
+        if (priceRange) {
+          const [min, max] = priceRange.split('-');
+          url += `&minPrice=${min}&maxPrice=${max}`; 
+        }
+
+        const res = await axios.get(url);
+        setProducts(res.data.products || res.data);
+        
+        if (res.data.totalPages) {
+          setTotalPages(res.data.totalPages);
+        } else {
+          setTotalPages(1);
+        }
+      } catch (error) {
+        console.error("Lỗi lấy sản phẩm:", error);
+      } finally {
+        setLoading(false);
       }
-      
-    } catch (error) {
-      console.error("Lỗi lấy sản phẩm:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchProducts();
+  }, [debouncedKeyword, brand, priceRange, sort, page]);
 
   useEffect(() => {
     fetchBrands();
   }, []);
-
-  useEffect(() => {
-    fetchProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, sort]);
-
-  const handleApplyFilters = () => {
-    setPage(1); 
-    fetchProducts();
-  };
 
   return (
     <>
@@ -110,9 +114,6 @@ const Home = () => {
           <option value="-price">Giá: Cao đến Thấp</option>
         </select>
 
-        <button onClick={handleApplyFilters} className="btn-filter">
-          <i className="fa-solid fa-filter"></i> Lọc
-        </button>
       </div>
 
       <h2 className="section-title">Gợi ý hôm nay</h2>
@@ -128,7 +129,6 @@ const Home = () => {
                 ? Number(item.price.$numberDecimal) 
                 : Number(item.price || 0);
 
-             // FIX: Logic kiểm tra link ảnh thông minh
              const imgSrc = item.images && item.images.length > 0 
                 ? (item.images[0].startsWith('http') ? item.images[0] : `http://localhost:5000${item.images[0]}`)
                 : 'https://via.placeholder.com/200';
@@ -142,7 +142,6 @@ const Home = () => {
                 />
                 <h3 style={{color: '#333'}}>{item.name}</h3>
                 <p className="price">{safePrice.toLocaleString('vi-VN')} đ</p>
-                {/* Thêm tag hết hàng ở ngoài Home luôn cho xịn */}
                 {(item.countInStock === 0 || item.stock === 0) && (
                     <span style={{background: '#dc3545', color: 'white', fontSize: '0.8rem', padding: '3px 8px', borderRadius: '4px', position: 'absolute', top: '10px', left: '10px'}}>Hết hàng</span>
                 )}

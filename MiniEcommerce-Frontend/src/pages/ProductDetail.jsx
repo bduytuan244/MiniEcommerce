@@ -6,21 +6,30 @@ import Swal from 'sweetalert2';
 const ProductDetail = () => {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
+  
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProduct = async () => {
+    const fetchProductAndReviews = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/products/${id}`);
-        const data = res.data?.data || res.data?.product || res.data;
+        const [productRes, reviewsRes] = await Promise.all([
+          axios.get(`http://localhost:5000/api/products/${id}`),
+          axios.get(`http://localhost:5000/api/reviews/${id}`)
+        ]);
+
+        const data = productRes.data?.data || productRes.data?.product || productRes.data;
         setProduct(data);
+        
+        setReviews(reviewsRes.data || []);
+        
         setLoading(false);
       } catch (error) {
         console.error("Lỗi lấy dữ liệu:", error);
         setLoading(false);
       }
     };
-    fetchProduct();
+    fetchProductAndReviews();
   }, [id]);
 
   const handleAddToCart = () => {
@@ -67,8 +76,6 @@ const ProductDetail = () => {
       ? (product.images[0].startsWith('http') ? product.images[0] : `http://localhost:5000${product.images[0]}`)
       : 'https://via.placeholder.com/400';
 
-  const safeReviews = Array.isArray(product.reviews) ? product.reviews : [];
-
   return (
     <>
       <div className="breadcrumb" style={{padding: '20px 0'}}>
@@ -90,7 +97,9 @@ const ProductDetail = () => {
           <div className="product-meta" style={{marginBottom: '20px', color: '#666'}}>
             <span style={{marginRight: '15px'}}>Danh mục: <strong style={{color: '#0d6efd'}}>{safeCategory}</strong></span>
             <span style={{marginRight: '15px'}}>|</span>
-            <span>Kho: <strong style={{color: actualStock > 0 ? '#198754' : '#dc3545'}}>{actualStock > 0 ? actualStock : 'Hết hàng'}</strong></span>
+            <span style={{marginRight: '15px'}}>Kho: <strong style={{color: actualStock > 0 ? '#198754' : '#dc3545'}}>{actualStock > 0 ? actualStock : 'Hết hàng'}</strong></span>
+            
+            <span>| Đánh giá: <strong style={{color: '#ffce3d'}}>{product.rating || 0} ⭐</strong> ({product.numReviews || 0} lượt)</span>
           </div>
           
           <div className="price-box" style={{background: '#fafafa', padding: '15px 20px', borderRadius: '8px', marginBottom: '25px', border: '1px solid #eee'}}>
@@ -133,8 +142,9 @@ const ProductDetail = () => {
       <div className="review-section" style={{background: 'white', padding: '30px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginTop: '30px'}}>
         <h2 style={{borderBottom: '2px solid #eee', paddingBottom: '10px'}}>Khách hàng đánh giá</h2>
         <div id="review-list" style={{marginTop: '20px'}}>
-          {safeReviews.length > 0 ? (
-            safeReviews.map((review, index) => {
+          
+          {reviews.length > 0 ? (
+            reviews.map((review, index) => {
               const safeComment = typeof review.comment === 'object' ? JSON.stringify(review.comment) : review.comment;
               const reviewerName = review.name || (review.user && review.user.name) || 'Khách hàng ẩn danh';
 

@@ -15,11 +15,22 @@ const Admin = () => {
 
     const [activeTab, setActiveTab] = useState('dashboard');
     const [dashboardData, setDashboardData] = useState({ revenue: 0, ordersCount: 0, completed: 0, pending: 0 });
+    
     const [users, setUsers] = useState([]);
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
     const [requests, setRequests] = useState([]);
     const [coupons, setCoupons] = useState([]);
+    const [categories, setCategories] = useState([]);
+    
+    const [userPage, setUserPage] = useState(1);
+    const [userTotalPages, setUserTotalPages] = useState(1);
+    const [productPage, setProductPage] = useState(1);
+    const [productTotalPages, setProductTotalPages] = useState(1);
+    const [orderPage, setOrderPage] = useState(1);
+    const [orderTotalPages, setOrderTotalPages] = useState(1);
+
+    const [categoryForm, setCategoryForm] = useState({ name: '', description: '' });
     
     const [editProductId, setEditProductId] = useState(null);
     const [formData, setFormData] = useState({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '', images: [] });
@@ -43,9 +54,13 @@ const Admin = () => {
         if (activeTab === 'orders') fetchOrders();
         if (activeTab === 'seller-requests') fetchRequests();
         if (activeTab === 'coupons') fetchCoupons();
-        if (activeTab === 'add-product' && editProductId) fetchProductDetail(editProductId);
-        if (activeTab === 'add-product' && !editProductId) setFormData({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '', images: [] });
-    }, [activeTab, editProductId, isAdminLoggedIn]);
+        if (activeTab === 'categories') fetchCategories(); 
+        if (activeTab === 'add-product') {
+            fetchCategories(); 
+            if (editProductId) fetchProductDetail(editProductId);
+            else setFormData({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '', images: [] });
+        }
+    }, [activeTab, editProductId, isAdminLoggedIn, userPage, productPage, orderPage]);
 
     const handleAdminLogin = async (e) => {
         e.preventDefault();
@@ -54,6 +69,7 @@ const Admin = () => {
             const res = await axios.post('http://localhost:5000/api/auth/login', { email: loginEmail, password: loginPassword });
             if (res.data.user && res.data.user.isAdmin) {
                 localStorage.setItem('adminToken', res.data.accessToken);
+                localStorage.setItem('adminRefreshToken', res.data.refreshToken);
                 localStorage.setItem('adminUser', JSON.stringify(res.data.user));
                 Swal.fire({ title: 'Thành công!', text: 'Đăng nhập Quản trị thành công', icon: 'success', timer: 1500, showConfirmButton: false });
                 setIsAdminLoggedIn(true);
@@ -68,7 +84,7 @@ const Admin = () => {
         }
     };
 
-    const handleLogout = () => { localStorage.removeItem('adminToken'); localStorage.removeItem('adminUser'); setIsAdminLoggedIn(false); };
+    const handleLogout = () => { localStorage.removeItem('adminToken'); localStorage.removeItem('adminUser'); localStorage.removeItem('adminRefreshToken'); setIsAdminLoggedIn(false); };
 
     if (!isAdminLoggedIn) {
         return (
@@ -89,17 +105,19 @@ const Admin = () => {
 
     const fetchDashboardData = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/orders', getAuthHeader());
+            const res = await axios.get('http://localhost:5000/api/orders?limit=10000', getAuthHeader());
+            const ordersList = res.data.orders || res.data || [];
+            
             let revenue = 0, completed = 0, pending = 0;
             let statusCount = { 'Chờ xác nhận': 0, 'Đang đóng gói': 0, 'Đang vận chuyển': 0, 'Hoàn thành': 0, 'Đã hủy': 0, 'Trả hàng': 0 };
             let revByDate = {};
-            res.data.forEach(o => {
+            ordersList.forEach(o => {
                 const st = o.status || 'Chờ xác nhận';
                 if (statusCount[st] !== undefined) statusCount[st]++;
                 if (st === 'Hoàn thành') { revenue += o.totalPrice; completed++; const d = new Date(o.createdAt).toLocaleDateString('vi-VN'); revByDate[d] = (revByDate[d] || 0) + o.totalPrice; }
                 if (st === 'Chờ xác nhận' || st === 'Đang đóng gói') pending++;
             });
-            setDashboardData({ revenue, ordersCount: res.data.length, completed, pending });
+            setDashboardData({ revenue, ordersCount: ordersList.length, completed, pending });
             if (window.Chart) {
                 if (chartInstances.current.status) chartInstances.current.status.destroy();
                 if (chartInstances.current.revenue) chartInstances.current.revenue.destroy();
@@ -110,11 +128,40 @@ const Admin = () => {
             }
         } catch (error) {}
     };
-    const fetchUsers = async () => { try { const res = await axios.get('http://localhost:5000/api/users', getAuthHeader()); setUsers(res.data); } catch(e){} };
-    const fetchProducts = async () => { try { const res = await axios.get('http://localhost:5000/api/products?limit=100'); setProducts(res.data.products); } catch(e){} };
-    const fetchOrders = async () => { try { const res = await axios.get('http://localhost:5000/api/orders', getAuthHeader()); setOrders(res.data); } catch(e){} };
+
+    const fetchUsers = async () => { 
+        try { 
+            const res = await axios.get(`http://localhost:5000/api/users?page=${userPage}&limit=5`, getAuthHeader()); 
+            setUsers(res.data.users || res.data); 
+            setUserTotalPages(res.data.totalPages || 1);
+        } catch(e){} 
+    };
+
+    const fetchProducts = async () => { 
+        try { 
+            const res = await axios.get(`http://localhost:5000/api/products?page=${productPage}&limit=5`); 
+            setProducts(res.data.products || []); 
+            setProductTotalPages(res.data.totalPages || 1);
+        } catch(e){} 
+    };
+
+    const fetchOrders = async () => { 
+        try { 
+            const res = await axios.get(`http://localhost:5000/api/orders?page=${orderPage}&limit=5`, getAuthHeader()); 
+            setOrders(res.data.orders || res.data || []); 
+            setOrderTotalPages(res.data.totalPages || 1);
+        } catch(e){} 
+    };
+
     const fetchRequests = async () => { try { const res = await axios.get('http://localhost:5000/api/users/seller-requests', getAuthHeader()); setRequests(res.data); } catch(e){} };
     const fetchCoupons = async () => { try { const res = await axios.get('http://localhost:5000/api/coupons', getAuthHeader()); setCoupons(res.data); } catch(e){} };
+    
+    const fetchCategories = async () => { 
+        try { 
+            const res = await axios.get('http://localhost:5000/api/categories', getAuthHeader()); 
+            setCategories(res.data); 
+        } catch(e){} 
+    };
     
     const fetchProductDetail = async (id) => { 
         try { 
@@ -131,7 +178,8 @@ const Admin = () => {
             try { 
                 await axios.delete(`http://localhost:5000/api/users/${id}`, getAuthHeader()); 
                 Swal.fire('Thành công', 'Đã xóa người dùng', 'success');
-                fetchUsers(); 
+                if (users.length === 1 && userPage > 1) setUserPage(p => p - 1);
+                else fetchUsers(); 
             } catch(e){ Swal.fire('Lỗi', e.response?.data?.message || 'Không thể xóa', 'error'); } 
         } 
     };
@@ -142,7 +190,8 @@ const Admin = () => {
             try { 
                 await axios.delete(`http://localhost:5000/api/products/${id}`, getAuthHeader()); 
                 Swal.fire('Thành công', 'Đã xóa sản phẩm', 'success');
-                fetchProducts(); 
+                if (products.length === 1 && productPage > 1) setProductPage(p => p - 1);
+                else fetchProducts(); 
             } catch(e){ Swal.fire('Lỗi', 'Không thể xóa', 'error'); } 
         } 
     };
@@ -185,6 +234,33 @@ const Admin = () => {
             setIsProcessing(false);
         }
     };
+
+    const handleCreateCategory = async (e) => {
+        e.preventDefault();
+        if (isProcessing) return;
+        setIsProcessing(true);
+        try {
+            await axios.post('http://localhost:5000/api/categories', categoryForm, getAuthHeader());
+            Swal.fire('Thành công', 'Đã tạo danh mục', 'success'); 
+            setCategoryForm({name:'', description:''}); 
+            fetchCategories();
+        } catch (e) { 
+            Swal.fire('Lỗi', e.response?.data?.message || 'Không thể tạo danh mục', 'error'); 
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleDeleteCategory = async (id) => {
+        const result = await Swal.fire({title: 'Xóa danh mục?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Xóa'});
+        if(result.isConfirmed) { 
+            try { 
+                await axios.delete(`http://localhost:5000/api/categories/${id}`, getAuthHeader()); 
+                Swal.fire('Thành công', 'Đã xóa danh mục', 'success');
+                fetchCategories(); 
+            } catch(e){ Swal.fire('Lỗi', e.response?.data?.message || 'Không thể xóa', 'error'); } 
+        } 
+    };
     
     const handleSaveProduct = async (e) => {
         e.preventDefault();
@@ -226,6 +302,7 @@ const Admin = () => {
             Swal.fire('Thành công', 'Đã lưu thông tin sản phẩm', 'success'); 
             setEditProductId(null); 
             setActiveTab('products');
+            setProductPage(1);
         } catch(e) { 
             Swal.fire('Lỗi', e.response?.data?.message || 'Không thể lưu', 'error'); 
         } finally {
@@ -248,9 +325,12 @@ const Admin = () => {
                 <h2 style={{textAlign: 'center', padding: '20px 0', margin: 0, background: '#23272b', borderBottom: '1px solid #4f5962', fontSize: '1.2rem'}}><i className="fa-solid fa-gear"></i> MINI ADMIN</h2>
                 <ul className="admin-menu" style={{listStyle: 'none', padding: 0, margin: 0, flex: 1}}>
                     <li className={activeTab==='dashboard'?'active':''} onClick={()=>setActiveTab('dashboard')} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='dashboard' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-chart-pie" style={{marginRight:'10px'}}></i> Tổng quan</li>
-                    <li className={activeTab==='products'||activeTab==='add-product'?'active':''} onClick={()=>{setEditProductId(null); setActiveTab('products');}} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='products'||activeTab==='add-product' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-boxes-stacked" style={{marginRight:'10px'}}></i> Sản phẩm</li>
-                    <li className={activeTab==='orders'?'active':''} onClick={()=>setActiveTab('orders')} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='orders' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-cart-flatbed" style={{marginRight:'10px'}}></i> Đơn hàng</li>
-                    <li className={activeTab==='users'?'active':''} onClick={()=>setActiveTab('users')} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='users' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-users-gear" style={{marginRight:'10px'}}></i> Người dùng</li>
+                    
+                    <li className={activeTab==='products'||activeTab==='add-product'?'active':''} onClick={()=>{setEditProductId(null); setActiveTab('products'); setProductPage(1);}} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='products'||activeTab==='add-product' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-boxes-stacked" style={{marginRight:'10px'}}></i> Sản phẩm</li>
+                    <li className={activeTab==='categories'?'active':''} onClick={()=>setActiveTab('categories')} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='categories' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-list" style={{marginRight:'10px'}}></i> Danh mục</li>
+                    <li className={activeTab==='orders'?'active':''} onClick={()=>{setActiveTab('orders'); setOrderPage(1);}} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='orders' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-cart-flatbed" style={{marginRight:'10px'}}></i> Đơn hàng</li>
+                    <li className={activeTab==='users'?'active':''} onClick={()=>{setActiveTab('users'); setUserPage(1);}} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='users' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-users-gear" style={{marginRight:'10px'}}></i> Người dùng</li>
+                    
                     <li className={activeTab==='seller-requests'?'active':''} onClick={()=>setActiveTab('seller-requests')} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='seller-requests' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-user-clock" style={{marginRight:'10px'}}></i> Duyệt Shop</li>
                     <li className={activeTab==='coupons'?'active':''} onClick={()=>setActiveTab('coupons')} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='coupons' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-ticket" style={{marginRight:'10px'}}></i> Voucher</li>
                 </ul>
@@ -280,24 +360,39 @@ const Admin = () => {
                     )}
 
                     {activeTab === 'users' && (
-                        <table style={{width: '100%', background: 'white', borderCollapse: 'collapse', borderRadius: '8px', overflow: 'hidden'}}>
-                            <thead><tr style={{background: '#f8f9fa', textAlign: 'left'}}><th style={{padding: '15px'}}>Tên & Email</th><th style={{textAlign:'center'}}>Phân quyền</th><th style={{textAlign:'center'}}>Trạng thái</th><th style={{textAlign:'center'}}>Hành động</th></tr></thead>
-                            <tbody>
-                                {users.map(u => (
-                                    <tr key={u._id} style={{borderBottom: '1px solid #eee'}}>
-                                        <td style={{padding: '15px'}}><strong>{u.name}</strong><br/><small style={{color:'#666'}}>{u.email}</small></td>
-                                        <td style={{textAlign:'center'}}>{u.isAdmin ? <span style={{background: '#cce5ff', color: '#004085', padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold'}}>Admin</span> : <span style={{background: '#d4edda', color: '#155724', padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold'}}>Khách</span>}</td>
-                                        <td style={{textAlign:'center'}}>{u.isLocked ? <span style={{background: '#f8d7da', color: '#721c24', padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold'}}>Đã Khóa</span> : <span style={{background: '#d4edda', color: '#155724', padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold'}}>Bình thường</span>}</td>
-                                        <td style={{textAlign:'center'}}>
-                                            {!u.isAdmin && <>
-                                                <button style={{background: u.isLocked?'#28a745':'#ffc107', color: u.isLocked?'#fff':'#333', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', marginRight: '5px', fontWeight: 'bold'}} onClick={()=>toggleLockUser(u._id)}>{u.isLocked ? 'Mở khóa' : 'Khóa'}</button>
-                                                <button style={{background:'#dc3545', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}} onClick={()=>deleteUser(u._id)}>Xóa</button>
-                                            </>}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <>
+                            <table style={{width: '100%', background: 'white', borderCollapse: 'collapse', borderRadius: '8px', overflow: 'hidden'}}>
+                                <thead><tr style={{background: '#f8f9fa', textAlign: 'left'}}><th style={{padding: '15px'}}>Tên & Email</th><th style={{textAlign:'center'}}>Phân quyền</th><th style={{textAlign:'center'}}>Trạng thái</th><th style={{textAlign:'center'}}>Hành động</th></tr></thead>
+                                <tbody>
+                                    {users.length === 0 ? <tr><td colSpan="4" style={{textAlign:'center', padding: '15px'}}>Không có dữ liệu</td></tr> : 
+                                        users.map(u => (
+                                            <tr key={u._id} style={{borderBottom: '1px solid #eee'}}>
+                                                <td style={{padding: '15px'}}><strong>{u.name}</strong><br/><small style={{color:'#666'}}>{u.email}</small></td>
+                                                <td style={{textAlign:'center'}}>{u.isAdmin ? <span style={{background: '#cce5ff', color: '#004085', padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold'}}>Admin</span> : <span style={{background: '#d4edda', color: '#155724', padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold'}}>Khách</span>}</td>
+                                                <td style={{textAlign:'center'}}>{u.isLocked ? <span style={{background: '#f8d7da', color: '#721c24', padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold'}}>Đã Khóa</span> : <span style={{background: '#d4edda', color: '#155724', padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold'}}>Bình thường</span>}</td>
+                                                <td style={{textAlign:'center'}}>
+                                                    {!u.isAdmin && <>
+                                                        <button style={{background: u.isLocked?'#28a745':'#ffc107', color: u.isLocked?'#fff':'#333', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', marginRight: '5px', fontWeight: 'bold'}} onClick={()=>toggleLockUser(u._id)}>{u.isLocked ? 'Mở khóa' : 'Khóa'}</button>
+                                                        <button style={{background:'#dc3545', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}} onClick={()=>deleteUser(u._id)}>Xóa</button>
+                                                    </>}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    }
+                                </tbody>
+                            </table>
+                            {userTotalPages > 1 && (
+                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '20px' }}>
+                                    <button style={{background: '#6c757d', padding: '8px 15px', color:'white', border:'none', borderRadius:'4px', opacity: userPage === 1 ? 0.5 : 1, cursor: userPage === 1 ? 'not-allowed' : 'pointer'}} disabled={userPage === 1} onClick={() => setUserPage(p => p - 1)}>
+                                        <i className="fa-solid fa-chevron-left"></i> Trước
+                                    </button>
+                                    <span style={{fontWeight: 'bold', color: '#555'}}>Trang {userPage} / {userTotalPages}</span>
+                                    <button style={{background: '#6c757d', padding: '8px 15px', color:'white', border:'none', borderRadius:'4px', opacity: userPage >= userTotalPages ? 0.5 : 1, cursor: userPage >= userTotalPages ? 'not-allowed' : 'pointer'}} disabled={userPage >= userTotalPages} onClick={() => setUserPage(p => p + 1)}>
+                                        Sau <i className="fa-solid fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                            )}
+                        </>
                     )}
 
                     {activeTab === 'products' && (
@@ -306,19 +401,32 @@ const Admin = () => {
                             <table style={{width: '100%', background: 'white', borderCollapse: 'collapse', borderRadius: '8px', overflow: 'hidden'}}>
                                 <thead><tr style={{background: '#f8f9fa', textAlign: 'left'}}><th style={{padding: '15px'}}>Sản phẩm</th><th style={{padding: '15px'}}>Giá</th><th style={{textAlign:'center'}}>Kho</th><th style={{textAlign:'center'}}>Hành động</th></tr></thead>
                                 <tbody>
-                                    {products.map(p => (
-                                        <tr key={p._id} style={{borderBottom: '1px solid #eee'}}>
-                                            <td style={{padding: '15px'}}><div style={{display:'flex', gap:'10px'}}><img src={p.images?.[0]?.startsWith('http') ? p.images[0] : `http://localhost:5000${p.images?.[0]}`} width="40" height="40" style={{objectFit: 'contain'}}/> <strong>{p.name}</strong></div></td>
-                                            <td style={{color:'#ee4d2d', fontWeight:'bold', padding: '15px'}}>{Number(p.price?.['$numberDecimal'] || p.price).toLocaleString()} đ</td>
-                                            <td style={{textAlign:'center'}}><span style={{padding: '4px 10px', borderRadius: '12px', background: p.countInStock > 0 || p.stock > 0 ? '#e6f4ea' : '#f8d7da', color: p.countInStock > 0 || p.stock > 0 ? '#1e7e34' : '#721c24', fontWeight: 'bold'}}>{p.countInStock || p.stock || 0}</span></td>
-                                            <td style={{textAlign:'center'}}>
-                                                <button style={{background:'#ffc107', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', marginRight: '5px', fontWeight: 'bold'}} onClick={()=>{setEditProductId(p._id); setActiveTab('add-product');}}>Sửa</button>
-                                                <button style={{background:'#dc3545', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}} onClick={()=>deleteProduct(p._id)}>Xóa</button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {products.length === 0 ? <tr><td colSpan="4" style={{textAlign:'center', padding: '15px'}}>Không có dữ liệu</td></tr> : 
+                                        products.map(p => (
+                                            <tr key={p._id} style={{borderBottom: '1px solid #eee'}}>
+                                                <td style={{padding: '15px'}}><div style={{display:'flex', gap:'10px'}}><img src={p.images?.[0]?.startsWith('http') ? p.images[0] : `http://localhost:5000${p.images?.[0]}`} width="40" height="40" style={{objectFit: 'contain'}}/> <strong>{p.name}</strong></div></td>
+                                                <td style={{color:'#ee4d2d', fontWeight:'bold', padding: '15px'}}>{Number(p.price?.['$numberDecimal'] || p.price).toLocaleString()} đ</td>
+                                                <td style={{textAlign:'center'}}><span style={{padding: '4px 10px', borderRadius: '12px', background: p.countInStock > 0 || p.stock > 0 ? '#e6f4ea' : '#f8d7da', color: p.countInStock > 0 || p.stock > 0 ? '#1e7e34' : '#721c24', fontWeight: 'bold'}}>{p.countInStock || p.stock || 0}</span></td>
+                                                <td style={{textAlign:'center'}}>
+                                                    <button style={{background:'#ffc107', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', marginRight: '5px', fontWeight: 'bold'}} onClick={()=>{setEditProductId(p._id); setActiveTab('add-product');}}>Sửa</button>
+                                                    <button style={{background:'#dc3545', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}} onClick={()=>deleteProduct(p._id)}>Xóa</button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    }
                                 </tbody>
                             </table>
+                            {productTotalPages > 1 && (
+                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '20px' }}>
+                                    <button style={{background: '#6c757d', padding: '8px 15px', color:'white', border:'none', borderRadius:'4px', opacity: productPage === 1 ? 0.5 : 1, cursor: productPage === 1 ? 'not-allowed' : 'pointer'}} disabled={productPage === 1} onClick={() => setProductPage(p => p - 1)}>
+                                        <i className="fa-solid fa-chevron-left"></i> Trước
+                                    </button>
+                                    <span style={{fontWeight: 'bold', color: '#555'}}>Trang {productPage} / {productTotalPages}</span>
+                                    <button style={{background: '#6c757d', padding: '8px 15px', color:'white', border:'none', borderRadius:'4px', opacity: productPage >= productTotalPages ? 0.5 : 1, cursor: productPage >= productTotalPages ? 'not-allowed' : 'pointer'}} disabled={productPage >= productTotalPages} onClick={() => setProductPage(p => p + 1)}>
+                                        Sau <i className="fa-solid fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                            )}
                         </>
                     )}
 
@@ -333,7 +441,16 @@ const Admin = () => {
                                 </div>
                                 <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
                                     <div style={{flex:1}}><label style={{fontWeight: 'bold'}}>Thương hiệu</label><input type="text" required style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', marginTop: '5px'}} value={formData.brand} onChange={e=>setFormData({...formData, brand:e.target.value})} /></div>
-                                    <div style={{flex:1}}><label style={{fontWeight: 'bold'}}>Danh mục</label><input type="text" required style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', marginTop: '5px'}} value={formData.category} onChange={e=>setFormData({...formData, category:e.target.value})} /></div>
+                                    
+                                    <div style={{flex:1}}>
+                                        <label style={{fontWeight: 'bold'}}>Danh mục</label>
+                                        <select required style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', marginTop: '5px'}} value={formData.category} onChange={e=>setFormData({...formData, category:e.target.value})}>
+                                            <option value="">-- Chọn danh mục --</option>
+                                            {categories.map(c => (
+                                                <option key={c._id} value={c.name}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                                 <div style={{marginBottom:'15px'}}><label style={{fontWeight: 'bold'}}>Ảnh (1 ảnh)</label><br/><input type="file" accept="image/*" ref={fileInputRef} style={{marginTop: '5px'}}/></div>
                                 <div style={{marginBottom:'15px'}}><label style={{fontWeight: 'bold'}}>Mô tả</label><textarea rows="4" style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', marginTop: '5px'}} value={formData.description} onChange={e=>setFormData({...formData, description:e.target.value})}></textarea></div>
@@ -347,22 +464,66 @@ const Admin = () => {
                         </div>
                     )}
 
+                    {activeTab === 'categories' && (
+                        <>
+                            <div style={{background:'white', padding:'20px', borderRadius:'8px', marginBottom:'20px', borderLeft:'4px solid #ee4d2d'}}>
+                                <form onSubmit={handleCreateCategory} style={{display:'flex', gap:'15px', alignItems:'flex-end'}}>
+                                    <div style={{flex:2}}><label style={{fontWeight: 'bold', marginBottom: '5px', display: 'block'}}>Tên Danh Mục</label><input type="text" required style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box'}} value={categoryForm.name} onChange={e=>setCategoryForm({...categoryForm, name:e.target.value})}/></div>
+                                    <div style={{flex:3}}><label style={{fontWeight: 'bold', marginBottom: '5px', display: 'block'}}>Mô tả</label><input type="text" style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box'}} value={categoryForm.description} onChange={e=>setCategoryForm({...categoryForm, description:e.target.value})}/></div>
+                                    
+                                    <button type="submit" disabled={isProcessing} style={{background: isProcessing ? '#ccc' : '#ee4d2d', color: 'white', border: 'none', padding:'12px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: isProcessing ? 'not-allowed' : 'pointer'}}>
+                                        {isProcessing ? 'ĐANG LƯU...' : 'Thêm Danh Mục'}
+                                    </button>
+                                </form>
+                            </div>
+                            <table style={{width: '100%', background: 'white', borderCollapse: 'collapse', borderRadius: '8px', overflow: 'hidden'}}>
+                                <thead><tr style={{background: '#f8f9fa', textAlign: 'left'}}><th style={{padding: '15px'}}>Tên Danh Mục</th><th>Mô tả</th><th style={{textAlign:'center'}}>Thao tác</th></tr></thead>
+                                <tbody>
+                                    {categories.length === 0 ? <tr><td colSpan="3" style={{textAlign:'center', padding: '15px'}}>Chưa có danh mục nào.</td></tr> : 
+                                        categories.map(c => (
+                                            <tr key={c._id} style={{borderBottom: '1px solid #eee'}}>
+                                                <td style={{fontWeight:'bold', color:'#333', padding: '15px'}}>{c.name}</td>
+                                                <td style={{color: '#666'}}>{c.description || 'Không có mô tả'}</td>
+                                                <td style={{textAlign:'center'}}>
+                                                    <button style={{background:'#dc3545', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}} onClick={()=>handleDeleteCategory(c._id)}>Xóa</button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    }
+                                </tbody>
+                            </table>
+                        </>
+                    )}
+
                     {activeTab === 'orders' && (
                         <>
                             <table style={{width: '100%', background: 'white', borderCollapse: 'collapse', borderRadius: '8px', overflow: 'hidden'}}>
                                 <thead><tr style={{background: '#f8f9fa', textAlign: 'left'}}><th style={{padding: '15px'}}>Mã Đơn</th><th>Khách hàng</th><th>Tổng tiền</th><th style={{textAlign:'center'}}>Trạng thái</th><th style={{textAlign:'center'}}>Hành động</th></tr></thead>
                                 <tbody>
-                                    {orders.map(o => (
-                                        <tr key={o._id} style={{borderBottom: '1px solid #eee'}}>
-                                            <td style={{color:'#0056b3', fontWeight:'bold', padding: '15px'}}>#{o._id.slice(-6).toUpperCase()}</td>
-                                            <td>{o.customerName}<br/><small>{o.phone}</small></td>
-                                            <td style={{color:'#ee4d2d', fontWeight:'bold'}}>{o.totalPrice.toLocaleString()} đ</td>
-                                            <td style={{textAlign:'center'}}><span style={{background: '#fff3cd', color: '#856404', padding: '5px 10px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold'}}>{o.status}</span></td>
-                                            <td style={{textAlign:'center'}}><button style={{background:'#0d6efd', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}} onClick={()=>{setSelectedOrder(o); setOrderStatus(o.status); setIsOrderModalOpen(true);}}>Chi tiết</button></td>
-                                        </tr>
-                                    ))}
+                                    {orders.length === 0 ? <tr><td colSpan="5" style={{textAlign:'center', padding: '15px'}}>Không có dữ liệu</td></tr> : 
+                                        orders.map(o => (
+                                            <tr key={o._id} style={{borderBottom: '1px solid #eee'}}>
+                                                <td style={{color:'#0056b3', fontWeight:'bold', padding: '15px'}}>#{o._id.slice(-6).toUpperCase()}</td>
+                                                <td>{o.customerName}<br/><small>{o.phone}</small></td>
+                                                <td style={{color:'#ee4d2d', fontWeight:'bold'}}>{o.totalPrice.toLocaleString()} đ</td>
+                                                <td style={{textAlign:'center'}}><span style={{background: '#fff3cd', color: '#856404', padding: '5px 10px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold'}}>{o.status}</span></td>
+                                                <td style={{textAlign:'center'}}><button style={{background:'#0d6efd', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}} onClick={()=>{setSelectedOrder(o); setOrderStatus(o.status); setIsOrderModalOpen(true);}}>Chi tiết</button></td>
+                                            </tr>
+                                        ))
+                                    }
                                 </tbody>
                             </table>
+                            {orderTotalPages > 1 && (
+                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '20px' }}>
+                                    <button style={{background: '#6c757d', padding: '8px 15px', color:'white', border:'none', borderRadius:'4px', opacity: orderPage === 1 ? 0.5 : 1, cursor: orderPage === 1 ? 'not-allowed' : 'pointer'}} disabled={orderPage === 1} onClick={() => setOrderPage(p => p - 1)}>
+                                        <i className="fa-solid fa-chevron-left"></i> Trước
+                                    </button>
+                                    <span style={{fontWeight: 'bold', color: '#555'}}>Trang {orderPage} / {orderTotalPages}</span>
+                                    <button style={{background: '#6c757d', padding: '8px 15px', color:'white', border:'none', borderRadius:'4px', opacity: orderPage >= orderTotalPages ? 0.5 : 1, cursor: orderPage >= orderTotalPages ? 'not-allowed' : 'pointer'}} disabled={orderPage >= orderTotalPages} onClick={() => setOrderPage(p => p + 1)}>
+                                        Sau <i className="fa-solid fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                            )}
 
                             {isOrderModalOpen && selectedOrder && (
                                 <div style={{position:'fixed', top:0, left:0, width:'100%', height:'100%', background:'rgba(0,0,0,0.5)', display:'flex', justifyContent:'center', alignItems:'center', zIndex:1000}}>
@@ -399,15 +560,17 @@ const Admin = () => {
                         <table style={{width: '100%', background: 'white', borderCollapse: 'collapse', borderRadius: '8px', overflow: 'hidden'}}>
                             <thead><tr style={{background: '#f8f9fa', textAlign: 'left'}}><th style={{padding: '15px'}}>Khách hàng</th><th>Email</th><th>Trạng thái</th><th style={{textAlign:'center'}}>Hành động</th></tr></thead>
                             <tbody>
-                                {requests.map(r => (
-                                    <tr key={r._id} style={{borderBottom: '1px solid #eee'}}>
-                                        <td style={{padding: '15px'}}><strong>{r.name}</strong></td><td>{r.email}</td><td><span style={{background: '#fff3cd', color: '#856404', padding: '5px 10px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold'}}>Chờ duyệt</span></td>
-                                        <td style={{textAlign:'center'}}>
-                                            <button style={{background:'#198754', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', marginRight: '5px', fontWeight: 'bold'}} onClick={()=>handleRequest(r._id, 'approved', r.name)}>Duyệt</button>
-                                            <button style={{background:'#dc3545', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}} onClick={()=>handleRequest(r._id, 'rejected', r.name)}>Từ chối</button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {requests.length === 0 ? <tr><td colSpan="4" style={{textAlign:'center', padding:'15px'}}>Không có dữ liệu</td></tr> : 
+                                    requests.map(r => (
+                                        <tr key={r._id} style={{borderBottom: '1px solid #eee'}}>
+                                            <td style={{padding: '15px'}}><strong>{r.name}</strong></td><td>{r.email}</td><td><span style={{background: '#fff3cd', color: '#856404', padding: '5px 10px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold'}}>Chờ duyệt</span></td>
+                                            <td style={{textAlign:'center'}}>
+                                                <button style={{background:'#198754', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', marginRight: '5px', fontWeight: 'bold'}} onClick={()=>handleRequest(r._id, 'approved', r.name)}>Duyệt</button>
+                                                <button style={{background:'#dc3545', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}} onClick={()=>handleRequest(r._id, 'rejected', r.name)}>Từ chối</button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                }
                             </tbody>
                         </table>
                     )}
@@ -428,17 +591,19 @@ const Admin = () => {
                             <table style={{width: '100%', background: 'white', borderCollapse: 'collapse', borderRadius: '8px', overflow: 'hidden'}}>
                                 <thead><tr style={{background: '#f8f9fa', textAlign: 'left'}}><th style={{padding: '15px'}}>Mã Voucher</th><th>Mức giảm</th><th>Hết hạn</th><th style={{textAlign:'center'}}>Thao tác</th></tr></thead>
                                 <tbody>
-                                    {coupons.map(c => {
-                                        const isExpired = new Date(c.expirationDate) < new Date();
-                                        return (
-                                            <tr key={c._id} style={{borderBottom: '1px solid #eee'}}>
-                                                <td style={{fontWeight:'bold', color:'#ee4d2d', padding: '15px'}}>{c.code}</td>
-                                                <td style={{fontWeight: 'bold'}}>{c.discount}%</td>
-                                                <td>{new Date(c.expirationDate).toLocaleDateString('vi-VN')} {isExpired && <span style={{background: '#e2e3e5', color: '#383d41', padding: '5px 10px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold', marginLeft: '10px'}}>Hết hạn</span>}</td>
-                                                <td style={{textAlign:'center'}}><button style={{background:'#dc3545', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}} onClick={()=>deleteCoupon(c._id)}>Xóa</button></td>
-                                            </tr>
-                                        )
-                                    })}
+                                    {coupons.length === 0 ? <tr><td colSpan="4" style={{textAlign:'center', padding:'15px'}}>Không có dữ liệu</td></tr> : 
+                                        coupons.map(c => {
+                                            const isExpired = new Date(c.expirationDate) < new Date();
+                                            return (
+                                                <tr key={c._id} style={{borderBottom: '1px solid #eee'}}>
+                                                    <td style={{fontWeight:'bold', color:'#ee4d2d', padding: '15px'}}>{c.code}</td>
+                                                    <td style={{fontWeight: 'bold'}}>{c.discount}%</td>
+                                                    <td>{new Date(c.expirationDate).toLocaleDateString('vi-VN')} {isExpired && <span style={{background: '#e2e3e5', color: '#383d41', padding: '5px 10px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold', marginLeft: '10px'}}>Hết hạn</span>}</td>
+                                                    <td style={{textAlign:'center'}}><button style={{background:'#dc3545', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}} onClick={()=>deleteCoupon(c._id)}>Xóa</button></td>
+                                                </tr>
+                                            )
+                                        })
+                                    }
                                 </tbody>
                             </table>
                         </>

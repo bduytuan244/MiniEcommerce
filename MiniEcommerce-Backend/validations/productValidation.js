@@ -25,7 +25,7 @@ const createProductSchema = Joi.object({
     }),
     description: Joi.string().allow('').optional(), 
     images: Joi.array().items(Joi.string()).optional() 
-});
+}).unknown(true);
 
 const updateProductSchema = Joi.object({
     name: Joi.string().messages({ 'string.empty': 'Tên sản phẩm không được để trống' }),
@@ -41,7 +41,7 @@ const updateProductSchema = Joi.object({
     category: Joi.string().messages({ 'string.empty': 'Danh mục không được để trống' }),
     description: Joi.string().allow('').optional(),
     images: Joi.array().items(Joi.string()).optional()
-}).min(1); 
+}).min(1).unknown(true);
 
 module.exports = {
     createProductSchema,
