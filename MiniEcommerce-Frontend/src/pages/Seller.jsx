@@ -14,6 +14,8 @@ const Seller = () => {
     const [dashboardData, setDashboardData] = useState({ totalProducts: 0, totalOrders: 0 });
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
+    
+    const [categories, setCategories] = useState([]);
 
     const [formData, setFormData] = useState({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '' });
     const fileInputRef = useRef(null);
@@ -38,9 +40,13 @@ const Seller = () => {
         if (activeTab === 'dashboard') fetchDashboardData();
         if (activeTab === 'products') fetchProducts();
         if (activeTab === 'orders') fetchOrders();
-        if (activeTab === 'add-product' && editProductId) fetchProductDetail(editProductId);
-        if (activeTab === 'add-product' && !editProductId) {
-            setFormData({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '' });
+        if (activeTab === 'add-product') {
+            fetchCategories(); 
+            if (editProductId) {
+                fetchProductDetail(editProductId);
+            } else {
+                setFormData({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '' });
+            }
         }
     }, [activeTab, editProductId]);
 
@@ -79,6 +85,15 @@ const Seller = () => {
             const p = res.data;
             setFormData({ ...p, countInStock: p.countInStock || p.stock || 0 });
         } catch (error) { console.error("Lỗi tải chi tiết SP", error); }
+    };
+
+    const fetchCategories = async () => {
+        try {
+            const res = await axios.get('http://localhost:5000/api/categories'); 
+            setCategories(res.data);
+        } catch (error) {
+            console.error("Lỗi tải danh mục", error);
+        }
     };
 
     const handleLogout = () => {
@@ -125,9 +140,7 @@ const Seller = () => {
             const form = new FormData();
             form.append('name', formData.name);
             form.append('price', formData.price);
-            
             form.append('countInStock', formData.countInStock); 
-            
             form.append('brand', formData.brand);
             form.append('category', formData.category);
             form.append('description', formData.description);
@@ -201,7 +214,7 @@ const Seller = () => {
                                     {products.length === 0 ? <tr><td colSpan="5" style={{textAlign:'center'}}>Chưa có sản phẩm nào.</td></tr> : 
                                         products.map(p => (
                                             <tr key={p._id}>
-                                                <td><img src={p.images?.[0]?.startsWith('http') ? p.images[0] : `http://localhost:5000${p.images?.[0]}`} width="50" height="50" style={{objectFit:'contain', borderRadius:'6px', border:'1px solid #eee', background:'white'}} /></td>
+                                                <td style={{padding: '10px'}}><img src={p.images?.[0]?.startsWith('http') ? p.images[0] : `http://localhost:5000${p.images?.[0]}`} width="50" height="50" style={{objectFit:'contain', borderRadius:'6px', border:'1px solid #eee', background:'white'}} /></td>
                                                 <td><strong>{p.name}</strong></td>
                                                 <td style={{color:'#ee4d2d', fontWeight:'bold'}}>{Number(p.price || p.price?.$numberDecimal || 0).toLocaleString('vi-VN')} đ</td>
                                                 
@@ -230,7 +243,16 @@ const Seller = () => {
                                 </div>
                                 <div style={{display:'flex', gap:'20px'}}>
                                     <div className="seller-form-group" style={{flex:1}}><label>Thương hiệu</label><input type="text" required value={formData.brand} onChange={e => setFormData({...formData, brand: e.target.value})} /></div>
-                                    <div className="seller-form-group" style={{flex:1}}><label>Danh mục</label><input type="text" required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} /></div>
+                                    
+                                    <div className="seller-form-group" style={{flex:1}}>
+                                        <label>Danh mục</label>
+                                        <select required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box'}}>
+                                            <option value="">-- Chọn danh mục --</option>
+                                            {categories.map(c => (
+                                                <option key={c._id} value={c.name}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                                 <div className="seller-form-group">
                                     <label>Ảnh sản phẩm</label>
