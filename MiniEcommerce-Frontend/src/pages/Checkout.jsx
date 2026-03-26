@@ -38,15 +38,29 @@ const Checkout = () => {
     const subTotal = calculateSubTotal();
     const finalTotal = subTotal - discount; 
 
-    const handleApplyCoupon = () => {
-        if (couponCode.toUpperCase() === 'SALE10') {
-            const discountValue = subTotal * 0.1; 
+    // HÀM ÁP DỤNG MÃ GIẢM GIÁ GỌI THẲNG LÊN BACKEND
+    const handleApplyCoupon = async () => {
+        if (!couponCode.trim()) {
+            setDiscount(0);
+            return;
+        }
+        
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.post('http://localhost:5000/api/coupons/apply', 
+                { code: couponCode }, 
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            
+            // Backend trả về: { message: "Áp dụng mã thành công!", discount: 15 }
+            const discountPercent = res.data.discount;
+            const discountValue = subTotal * (discountPercent / 100);
+            
             setDiscount(discountValue);
-            Swal.fire('Thành công', 'Đã áp dụng mã giảm giá 10%!', 'success');
-        } else if (couponCode.trim() === '') {
-             setDiscount(0);
-        } else {
-            Swal.fire('Lỗi', 'Mã giảm giá không hợp lệ hoặc đã hết hạn!', 'error');
+            Swal.fire('Thành công', `Đã áp dụng mã giảm giá ${discountPercent}%!`, 'success');
+            
+        } catch (error) {
+            Swal.fire('Lỗi', error.response?.data?.message || 'Mã giảm giá không hợp lệ!', 'error');
             setDiscount(0);
         }
     };
