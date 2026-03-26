@@ -69,13 +69,11 @@ const Checkout = () => {
                     image: item.images?.[0] || item.image,
                     price: typeof item.price === 'object' ? Number(item.price.$numberDecimal) : item.price
                 })),
-                
                 shippingInfo: { 
                     address: shippingInfo.address, 
                     phone: shippingInfo.phone,
                     fullName: shippingInfo.name 
                 },
-                
                 paymentMethod: shippingInfo.paymentMethod,
                 totalPrice: finalTotal
             }; 
@@ -85,10 +83,37 @@ const Checkout = () => {
             });
 
             if (res.status === 201) {
+                const orderId = res.data._id || res.data.orders?.[0]?._id; 
+
+                if (shippingInfo.paymentMethod === 'VNPAY') {
+                    try {
+                        const payRes = await axios.post(`http://localhost:5000/api/payment/create_payment_url/${orderId}`, {
+                            orderId: orderId,
+                            amount: finalTotal,
+                            bankCode: '' 
+                        }, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+
+                        if (payRes.data.url || payRes.data.paymentUrl) {
+                            localStorage.removeItem('cart');
+                            window.dispatchEvent(new Event('storage')); 
+                            
+                            const redirectUrl = payRes.data.url || payRes.data.paymentUrl;
+                            window.location.href = redirectUrl;
+                            return; 
+                        }
+                    } catch (payError) {
+                        console.error("Lỗi tạo link VNPAY:", payError);
+                        Swal.fire('Lỗi', 'Cổng thanh toán đang bận, vui lòng thử lại!', 'error');
+                        return;
+                    }
+                }
+
                 localStorage.removeItem('cart');
                 window.dispatchEvent(new Event('storage')); 
                 Swal.fire('Thành công', 'Đơn hàng đã được ghi nhận!', 'success').then(() => {
-                    navigate(`/order/${res.data._id}`); 
+                    navigate(`/order/${orderId}`); 
                 });
             }
         } catch (error) { 
