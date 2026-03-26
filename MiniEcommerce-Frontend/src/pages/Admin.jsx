@@ -21,6 +21,9 @@ const Admin = () => {
     const [requests, setRequests] = useState([]);
     const [coupons, setCoupons] = useState([]);
     
+    const [categories, setCategories] = useState([]);
+    const [categoryForm, setCategoryForm] = useState({ name: '', description: '' });
+    
     const [editProductId, setEditProductId] = useState(null);
     const [formData, setFormData] = useState({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '', images: [] });
     const fileInputRef = useRef(null);
@@ -43,8 +46,12 @@ const Admin = () => {
         if (activeTab === 'orders') fetchOrders();
         if (activeTab === 'seller-requests') fetchRequests();
         if (activeTab === 'coupons') fetchCoupons();
-        if (activeTab === 'add-product' && editProductId) fetchProductDetail(editProductId);
-        if (activeTab === 'add-product' && !editProductId) setFormData({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '', images: [] });
+        if (activeTab === 'categories') fetchCategories(); 
+        if (activeTab === 'add-product') {
+            fetchCategories(); 
+            if (editProductId) fetchProductDetail(editProductId);
+            else setFormData({ name: '', price: '', countInStock: 0, brand: '', category: '', description: '', images: [] });
+        }
     }, [activeTab, editProductId, isAdminLoggedIn]);
 
     const handleAdminLogin = async (e) => {
@@ -116,6 +123,13 @@ const Admin = () => {
     const fetchRequests = async () => { try { const res = await axios.get('http://localhost:5000/api/users/seller-requests', getAuthHeader()); setRequests(res.data); } catch(e){} };
     const fetchCoupons = async () => { try { const res = await axios.get('http://localhost:5000/api/coupons', getAuthHeader()); setCoupons(res.data); } catch(e){} };
     
+    const fetchCategories = async () => { 
+        try { 
+            const res = await axios.get('http://localhost:5000/api/categories', getAuthHeader()); 
+            setCategories(res.data); 
+        } catch(e){} 
+    };
+    
     const fetchProductDetail = async (id) => { 
         try { 
             const res = await axios.get(`http://localhost:5000/api/products/${id}`); 
@@ -185,6 +199,33 @@ const Admin = () => {
             setIsProcessing(false);
         }
     };
+
+    const handleCreateCategory = async (e) => {
+        e.preventDefault();
+        if (isProcessing) return;
+        setIsProcessing(true);
+        try {
+            await axios.post('http://localhost:5000/api/categories', categoryForm, getAuthHeader());
+            Swal.fire('Thành công', 'Đã tạo danh mục', 'success'); 
+            setCategoryForm({name:'', description:''}); 
+            fetchCategories();
+        } catch (e) { 
+            Swal.fire('Lỗi', e.response?.data?.message || 'Không thể tạo danh mục', 'error'); 
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleDeleteCategory = async (id) => {
+        const result = await Swal.fire({title: 'Xóa danh mục?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Xóa'});
+        if(result.isConfirmed) { 
+            try { 
+                await axios.delete(`http://localhost:5000/api/categories/${id}`, getAuthHeader()); 
+                Swal.fire('Thành công', 'Đã xóa danh mục', 'success');
+                fetchCategories(); 
+            } catch(e){ Swal.fire('Lỗi', e.response?.data?.message || 'Không thể xóa', 'error'); } 
+        } 
+    };
     
     const handleSaveProduct = async (e) => {
         e.preventDefault();
@@ -249,6 +290,9 @@ const Admin = () => {
                 <ul className="admin-menu" style={{listStyle: 'none', padding: 0, margin: 0, flex: 1}}>
                     <li className={activeTab==='dashboard'?'active':''} onClick={()=>setActiveTab('dashboard')} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='dashboard' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-chart-pie" style={{marginRight:'10px'}}></i> Tổng quan</li>
                     <li className={activeTab==='products'||activeTab==='add-product'?'active':''} onClick={()=>{setEditProductId(null); setActiveTab('products');}} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='products'||activeTab==='add-product' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-boxes-stacked" style={{marginRight:'10px'}}></i> Sản phẩm</li>
+                    
+                    <li className={activeTab==='categories'?'active':''} onClick={()=>setActiveTab('categories')} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='categories' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-list" style={{marginRight:'10px'}}></i> Danh mục</li>
+                    
                     <li className={activeTab==='orders'?'active':''} onClick={()=>setActiveTab('orders')} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='orders' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-cart-flatbed" style={{marginRight:'10px'}}></i> Đơn hàng</li>
                     <li className={activeTab==='users'?'active':''} onClick={()=>setActiveTab('users')} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='users' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-users-gear" style={{marginRight:'10px'}}></i> Người dùng</li>
                     <li className={activeTab==='seller-requests'?'active':''} onClick={()=>setActiveTab('seller-requests')} style={{padding: '15px 20px', cursor:'pointer', borderBottom: '1px solid #4f5962', background: activeTab==='seller-requests' ? '#ee4d2d' : 'transparent'}}><i className="fa-solid fa-user-clock" style={{marginRight:'10px'}}></i> Duyệt Shop</li>
@@ -333,7 +377,16 @@ const Admin = () => {
                                 </div>
                                 <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
                                     <div style={{flex:1}}><label style={{fontWeight: 'bold'}}>Thương hiệu</label><input type="text" required style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', marginTop: '5px'}} value={formData.brand} onChange={e=>setFormData({...formData, brand:e.target.value})} /></div>
-                                    <div style={{flex:1}}><label style={{fontWeight: 'bold'}}>Danh mục</label><input type="text" required style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', marginTop: '5px'}} value={formData.category} onChange={e=>setFormData({...formData, category:e.target.value})} /></div>
+                                    
+                                    <div style={{flex:1}}>
+                                        <label style={{fontWeight: 'bold'}}>Danh mục</label>
+                                        <select required style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', marginTop: '5px'}} value={formData.category} onChange={e=>setFormData({...formData, category:e.target.value})}>
+                                            <option value="">-- Chọn danh mục --</option>
+                                            {categories.map(c => (
+                                                <option key={c._id} value={c.name}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                                 <div style={{marginBottom:'15px'}}><label style={{fontWeight: 'bold'}}>Ảnh (1 ảnh)</label><br/><input type="file" accept="image/*" ref={fileInputRef} style={{marginTop: '5px'}}/></div>
                                 <div style={{marginBottom:'15px'}}><label style={{fontWeight: 'bold'}}>Mô tả</label><textarea rows="4" style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', marginTop: '5px'}} value={formData.description} onChange={e=>setFormData({...formData, description:e.target.value})}></textarea></div>
@@ -345,6 +398,37 @@ const Admin = () => {
                                 </div>
                             </form>
                         </div>
+                    )}
+
+                    {activeTab === 'categories' && (
+                        <>
+                            <div style={{background:'white', padding:'20px', borderRadius:'8px', marginBottom:'20px', borderLeft:'4px solid #ee4d2d'}}>
+                                <form onSubmit={handleCreateCategory} style={{display:'flex', gap:'15px', alignItems:'flex-end'}}>
+                                    <div style={{flex:2}}><label style={{fontWeight: 'bold', marginBottom: '5px', display: 'block'}}>Tên Danh Mục</label><input type="text" required style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box'}} value={categoryForm.name} onChange={e=>setCategoryForm({...categoryForm, name:e.target.value})}/></div>
+                                    <div style={{flex:3}}><label style={{fontWeight: 'bold', marginBottom: '5px', display: 'block'}}>Mô tả</label><input type="text" style={{width:'100%', padding:'10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box'}} value={categoryForm.description} onChange={e=>setCategoryForm({...categoryForm, description:e.target.value})}/></div>
+                                    
+                                    <button type="submit" disabled={isProcessing} style={{background: isProcessing ? '#ccc' : '#ee4d2d', color: 'white', border: 'none', padding:'12px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: isProcessing ? 'not-allowed' : 'pointer'}}>
+                                        {isProcessing ? 'ĐANG LƯU...' : 'Thêm Danh Mục'}
+                                    </button>
+                                </form>
+                            </div>
+                            <table style={{width: '100%', background: 'white', borderCollapse: 'collapse', borderRadius: '8px', overflow: 'hidden'}}>
+                                <thead><tr style={{background: '#f8f9fa', textAlign: 'left'}}><th style={{padding: '15px'}}>Tên Danh Mục</th><th>Mô tả</th><th style={{textAlign:'center'}}>Thao tác</th></tr></thead>
+                                <tbody>
+                                    {categories.length === 0 ? <tr><td colSpan="3" style={{textAlign:'center', padding: '15px'}}>Chưa có danh mục nào.</td></tr> : 
+                                        categories.map(c => (
+                                            <tr key={c._id} style={{borderBottom: '1px solid #eee'}}>
+                                                <td style={{fontWeight:'bold', color:'#333', padding: '15px'}}>{c.name}</td>
+                                                <td style={{color: '#666'}}>{c.description || 'Không có mô tả'}</td>
+                                                <td style={{textAlign:'center'}}>
+                                                    <button style={{background:'#dc3545', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}} onClick={()=>handleDeleteCategory(c._id)}>Xóa</button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    }
+                                </tbody>
+                            </table>
+                        </>
                     )}
 
                     {activeTab === 'orders' && (
