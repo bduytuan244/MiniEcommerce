@@ -51,10 +51,15 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('Kết nối MongoDB thành công');
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-      console.log(`Server Backend chạy tại http://localhost:${PORT}`);
-    });
+    
+    if (process.env.NODE_ENV !== 'test') {
+        app.listen(PORT, () => {
+          console.log(`Server Backend chạy tại http://localhost:${PORT}`);
+        });
+    }
   })
   .catch((err) => {
     console.error('Lỗi kết nối MongoDB:', err.message);
   });
+
+module.exports = app;
